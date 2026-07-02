@@ -791,6 +791,11 @@
       background: #edf2f7;
     }
 
+    .track[data-tooltip],
+    .chart rect[data-tooltip] {
+      cursor: help;
+    }
+
     .fill {
       height: 100%;
       width: 0;
@@ -1285,6 +1290,110 @@
       margin: 0;
     }
 
+    .closing-panel {
+      display: grid;
+      gap: 12px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--white);
+      box-shadow: var(--shadow);
+    }
+
+    .closing-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .closing-head label {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .closing-head p {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .closing-add {
+      min-height: 34px;
+      color: var(--navy);
+      border-color: var(--orange);
+      background: #fff8ef;
+    }
+
+    .closing-table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #ffffff;
+    }
+
+    .closing-table {
+      width: 100%;
+      min-width: 760px;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    .closing-table th {
+      padding: 10px 8px;
+      color: #ffffff;
+      background: var(--navy);
+      border: 1px solid #000000;
+      font-size: 11px;
+      line-height: 1.15;
+      font-weight: 900;
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    .closing-table td {
+      padding: 7px;
+      border: 1px solid var(--line);
+      vertical-align: top;
+      background: #ffffff;
+    }
+
+    .closing-table input,
+    .closing-table textarea {
+      width: 100%;
+      min-height: 34px;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      background: #f7f9fc;
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .closing-table textarea {
+      min-height: 42px;
+      resize: vertical;
+      padding: 8px;
+      line-height: 1.3;
+    }
+
+    .closing-table input {
+      padding: 0 8px;
+    }
+
+    .closing-remove {
+      width: 30px;
+      min-height: 30px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--red);
+      background: #ffffff;
+      font-weight: 900;
+    }
+
     .strategy-note {
       display: grid;
       grid-template-columns: minmax(220px, 0.75fr) minmax(320px, 1.25fr);
@@ -1415,6 +1524,30 @@
       transform: translateY(0);
     }
 
+    .chart-tip {
+      position: fixed;
+      left: 0;
+      top: 0;
+      z-index: 60;
+      max-width: min(280px, calc(100vw - 24px));
+      padding: 9px 11px;
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: 8px;
+      color: #ffffff;
+      background: #07131d;
+      box-shadow: 0 16px 38px rgba(13, 28, 44, 0.28);
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.25;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 120ms ease;
+    }
+
+    .chart-tip.show {
+      opacity: 1;
+    }
+
     @media (max-width: 1120px) {
       .control-band,
       .content-grid {
@@ -1440,13 +1573,17 @@
       }
 
       .top-actions {
-        width: 100%;
+        align-self: stretch;
+        align-items: stretch;
+        flex-direction: column;
         justify-content: stretch;
+        width: auto;
       }
 
       .top-actions .button,
       .top-actions .file-button {
-        flex: 1 1 auto;
+        width: 100%;
+        flex: none;
       }
 
       main {
@@ -1488,6 +1625,14 @@
 
       .detail-header {
         flex-direction: column;
+      }
+
+      .closing-head {
+        flex-direction: column;
+      }
+
+      .closing-add {
+        width: 100%;
       }
 
       .detail-metric {
@@ -1634,9 +1779,29 @@
           <label for="globalNotes">Comentario ejecutivo</label>
           <textarea id="globalNotes" placeholder="Escribe el resumen para la lámina global."></textarea>
         </div>
-        <div class="notes">
-          <label for="closingNotes">Conclusiones / acuerdos</label>
+        <div class="closing-panel">
+          <div class="closing-head">
+            <div>
+              <label for="closingNotes">Conclusiones / acuerdos</label>
+              <p>Este contenido alimenta la lámina final del PowerPoint.</p>
+            </div>
+            <button class="button closing-add" id="addClosingRowBtn" type="button">Agregar fila</button>
+          </div>
           <textarea id="closingNotes" placeholder="Escribe conclusiones, acuerdos o próximos pasos para la lámina final."></textarea>
+          <div class="closing-table-wrap">
+            <table class="closing-table" aria-label="Tabla de actividades finales">
+              <thead>
+                <tr>
+                  <th>Actividad</th>
+                  <th>Responsable</th>
+                  <th>Fecha de cumplimiento</th>
+                  <th>Observaciones</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="closingRows"></tbody>
+            </table>
+          </div>
         </div>
       </section>
 
@@ -1799,6 +1964,7 @@
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="chart-tip" id="chartTooltip" role="tooltip" aria-hidden="true"></div>
 
   <script src="assets/xlsx.full.min.js"></script>
   <script src="assets/pptxgen.bundle.js"></script>
@@ -2590,6 +2756,7 @@
     const EVIDENCE_STORAGE = "rhKpiTracker.evidence.v1";
     const GLOBAL_STORAGE = "rhKpiTracker.globalNotes.v1";
     const CLOSING_STORAGE = "rhKpiTracker.closingNotes.v1";
+    const CLOSING_ACTIONS_STORAGE = "rhKpiTracker.closingActions.v1";
     const AREA_STORAGE = "rhKpiTracker.area.v2";
     const MAX_EVIDENCE_PER_KPI = 4;
     const EKUORA_FOOTER_IMAGE = "data:image/png;base64,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";
@@ -2619,6 +2786,7 @@
       evidence: loadJson(EVIDENCE_STORAGE, {}),
       globalNotes: localStorage.getItem(GLOBAL_STORAGE) || "",
       closingNotes: localStorage.getItem(CLOSING_STORAGE) || "",
+      closingActions: loadJson(CLOSING_ACTIONS_STORAGE, defaultClosingActions()),
       area: localStorage.getItem(AREA_STORAGE) || "",
       search: ""
     };
@@ -2636,6 +2804,8 @@
       resetNotesBtn: document.getElementById("resetNotesBtn"),
       globalNotes: document.getElementById("globalNotes"),
       closingNotes: document.getElementById("closingNotes"),
+      addClosingRowBtn: document.getElementById("addClosingRowBtn"),
+      closingRows: document.getElementById("closingRows"),
       scoreValue: document.getElementById("scoreValue"),
       scoreMeta: document.getElementById("scoreMeta"),
       avgValue: document.getElementById("avgValue"),
@@ -2667,7 +2837,8 @@
       evidenceInput: document.getElementById("evidenceInput"),
       evidenceCount: document.getElementById("evidenceCount"),
       evidenceGallery: document.getElementById("evidenceGallery"),
-      toast: document.getElementById("toast")
+      toast: document.getElementById("toast"),
+      chartTooltip: document.getElementById("chartTooltip")
     };
 
     boot();
@@ -2679,6 +2850,7 @@
       els.areaInput.value = state.area;
       els.globalNotes.value = state.globalNotes;
       els.closingNotes.value = state.closingNotes;
+      renderClosingRows();
       bindEvents();
       render();
     }
@@ -2732,6 +2904,30 @@
       els.closingNotes.addEventListener("input", event => {
         state.closingNotes = event.target.value;
         localStorage.setItem(CLOSING_STORAGE, state.closingNotes);
+      });
+
+      els.addClosingRowBtn.addEventListener("click", () => {
+        state.closingActions.push(emptyClosingRow());
+        saveJson(CLOSING_ACTIONS_STORAGE, state.closingActions);
+        renderClosingRows();
+      });
+
+      els.closingRows.addEventListener("input", event => {
+        const field = event.target.dataset.field;
+        const id = event.target.closest("tr")?.dataset.id;
+        const row = state.closingActions.find(item => item.id === id);
+        if (!field || !row) return;
+        row[field] = event.target.value;
+        saveJson(CLOSING_ACTIONS_STORAGE, state.closingActions);
+      });
+
+      els.closingRows.addEventListener("click", event => {
+        const button = event.target.closest("[data-remove-closing]");
+        if (!button) return;
+        state.closingActions = state.closingActions.filter(item => item.id !== button.dataset.removeClosing);
+        if (!state.closingActions.length) state.closingActions = defaultClosingActions();
+        saveJson(CLOSING_ACTIONS_STORAGE, state.closingActions);
+        renderClosingRows();
       });
 
       els.kpiNotes.addEventListener("input", event => {
@@ -2806,16 +3002,102 @@
         state.evidence = {};
         state.globalNotes = "";
         state.closingNotes = "";
+        state.closingActions = defaultClosingActions();
         localStorage.removeItem(COMMENT_STORAGE);
         localStorage.removeItem(NEXT_STEP_STORAGE);
         localStorage.removeItem(EVIDENCE_STORAGE);
         localStorage.removeItem(GLOBAL_STORAGE);
         localStorage.removeItem(CLOSING_STORAGE);
+        localStorage.removeItem(CLOSING_ACTIONS_STORAGE);
         els.globalNotes.value = "";
         els.closingNotes.value = "";
+        renderClosingRows();
         render();
         showToast("Capturas locales limpiadas.");
       });
+
+      bindChartTooltip();
+    }
+
+    function emptyClosingRow() {
+      return {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        activity: "",
+        owner: "",
+        dueDate: "",
+        observations: ""
+      };
+    }
+
+    function defaultClosingActions() {
+      return Array.from({ length: 4 }, emptyClosingRow);
+    }
+
+    function renderClosingRows() {
+      if (!Array.isArray(state.closingActions) || !state.closingActions.length) {
+        state.closingActions = defaultClosingActions();
+      }
+      els.closingRows.innerHTML = state.closingActions.map(row => `
+        <tr data-id="${escapeHtml(row.id)}">
+          <td><textarea data-field="activity" placeholder="Actividad">${escapeHtml(row.activity || "")}</textarea></td>
+          <td><input data-field="owner" type="text" placeholder="Responsable" value="${escapeHtml(row.owner || "")}"></td>
+          <td><input data-field="dueDate" type="date" value="${escapeHtml(row.dueDate || "")}"></td>
+          <td><textarea data-field="observations" placeholder="Observaciones">${escapeHtml(row.observations || "")}</textarea></td>
+          <td><button class="closing-remove" type="button" data-remove-closing="${escapeHtml(row.id)}" title="Quitar fila">×</button></td>
+        </tr>
+      `).join("");
+    }
+
+    function closingActionRows() {
+      return (state.closingActions || []).filter(row => (
+        clean(row.activity) || clean(row.owner) || clean(row.dueDate) || clean(row.observations)
+      ));
+    }
+
+    function bindChartTooltip() {
+      document.addEventListener("pointerover", event => {
+        const target = event.target.closest?.("[data-tooltip]");
+        if (!target) return;
+        showChartTooltip(target.dataset.tooltip, event);
+      });
+      document.addEventListener("pointermove", event => {
+        if (els.chartTooltip.classList.contains("show")) positionChartTooltip(event);
+      });
+      document.addEventListener("pointerout", event => {
+        if (event.target.closest?.("[data-tooltip]")) hideChartTooltip();
+      });
+      document.addEventListener("focusin", event => {
+        const target = event.target.closest?.("[data-tooltip]");
+        if (!target) return;
+        const box = target.getBoundingClientRect();
+        showChartTooltip(target.dataset.tooltip, { clientX: box.left + box.width / 2, clientY: box.top });
+      });
+      document.addEventListener("focusout", event => {
+        if (event.target.closest?.("[data-tooltip]")) hideChartTooltip();
+      });
+    }
+
+    function showChartTooltip(text, event) {
+      if (!text) return;
+      els.chartTooltip.textContent = text;
+      els.chartTooltip.setAttribute("aria-hidden", "false");
+      els.chartTooltip.classList.add("show");
+      positionChartTooltip(event);
+    }
+
+    function positionChartTooltip(event) {
+      const gap = 14;
+      const box = els.chartTooltip.getBoundingClientRect();
+      let x = event.clientX + gap;
+      let y = event.clientY + gap;
+      if (x + box.width > window.innerWidth - 8) x = event.clientX - box.width - gap;
+      if (y + box.height > window.innerHeight - 8) y = event.clientY - box.height - gap;
+      els.chartTooltip.style.transform = `translate(${Math.max(8, x)}px, ${Math.max(8, y)}px)`;
+    }
+
+    function hideChartTooltip() {
+      els.chartTooltip.classList.remove("show");
+      els.chartTooltip.setAttribute("aria-hidden", "true");
     }
 
     async function loadExcelFile(file) {
@@ -3222,11 +3504,13 @@
     function miniBar(label, value, max, color, row) {
       const chartValue = chartNumber(value, row);
       const width = chartValue == null ? 0 : Math.max(2, Math.min(100, Math.abs(chartValue) / max * 100));
+      const display = formatValue(value, row);
+      const tooltip = `${label}: ${display}`;
       return `
         <div class="mini-row">
-          <span>${label}</span>
-          <div class="track"><div class="fill" style="width:${width}%;background:${color}"></div></div>
-          <strong>${formatValue(value, row)}</strong>
+          <span>${escapeHtml(label)}</span>
+          <div class="track" data-tooltip="${escapeHtml(tooltip)}" aria-label="${escapeHtml(tooltip)}" tabindex="0"><div class="fill" style="width:${width}%;background:${color}"></div></div>
+          <strong>${escapeHtml(display)}</strong>
         </div>
       `;
     }
@@ -3234,11 +3518,13 @@
     function metricTile(label, value, max, color, row) {
       const chartValue = chartNumber(value, row);
       const width = chartValue == null ? 0 : Math.max(2, Math.min(100, Math.abs(chartValue) / max * 100));
+      const display = formatValue(value, row);
+      const tooltip = `${label}: ${display}`;
       return `
         <div class="metric-tile">
           <span>${escapeHtml(label)}</span>
-          <strong>${formatValue(value, row)}</strong>
-          <div class="track"><div class="fill" style="width:${width}%;background:${color}"></div></div>
+          <strong>${escapeHtml(display)}</strong>
+          <div class="track" data-tooltip="${escapeHtml(tooltip)}" aria-label="${escapeHtml(tooltip)}" tabindex="0"><div class="fill" style="width:${width}%;background:${color}"></div></div>
         </div>
       `;
     }
@@ -3255,7 +3541,7 @@
           note: `${row.unit || "s/u"} · ${shorten(row.objective || "", 92)}`,
           primary: true
         },
-        { label: "Acumulado", value: formatValue(firstNumber(row.currentAccumulated, values.current), row) },
+        { label: "Acumulado", value: formatAccumulated(row, values.current) },
         { label: "Mínimo", value: formatValue(row.budget, row) },
         { label: "Real", value: formatValue(values.current, row) },
         { label: "Cumplimiento", value: formatPercent(compliance, 1) },
@@ -3416,7 +3702,10 @@
         const selectedBand = idx === selectedIdx ? `<rect x="${left + idx * groupW + 2}" y="${top - 10}" width="${groupW - 4}" height="${innerH + 16}" fill="#fff8ef" stroke="#${BRAND.orange}" stroke-width="1" rx="6" opacity="0.86"></rect>` : "";
         return `
           ${selectedBand}
-          ${bars.map(bar => `<rect x="${bar.x}" y="${y(bar.value)}" width="${barW}" height="${h(bar.value)}" fill="${bar.color}" rx="2"><title>${escapeHtml(`${bar.label} ${point.fullLabel}: ${formatValue(bar.value, row)}`)}</title></rect>`).join("")}
+          ${bars.map(bar => {
+            const tooltip = `${bar.label} ${point.fullLabel}: ${formatValue(bar.value, row)}`;
+            return `<rect x="${bar.x}" y="${y(bar.value)}" width="${barW}" height="${h(bar.value)}" fill="${bar.color}" rx="2" data-tooltip="${escapeHtml(tooltip)}" aria-label="${escapeHtml(tooltip)}" tabindex="0"><title>${escapeHtml(tooltip)}</title></rect>`;
+          }).join("")}
           ${labels}
           <text x="${left + idx * groupW + groupW / 2}" y="${height - 16}" text-anchor="middle">${point.label}</text>
         `;
@@ -3528,7 +3817,7 @@
         metric: shorten(row.metric || "", 58),
         unit: row.unit || "s/u",
         source: shorten(row.sourceComment || "Fuente RH", 58),
-        accumulated: formatValue(firstNumber(row.currentAccumulated, values.current), row),
+        accumulated: formatAccumulated(row, values.current),
         budget: formatValue(row.budget, row),
         current: formatValue(values.current, row),
         compliance: formatPercent(compliance, 0),
@@ -3726,6 +4015,12 @@
       return new Intl.NumberFormat("es-MX", { maximumFractionDigits: 2 }).format(num);
     }
 
+    function formatAccumulated(row, fallback) {
+      const num = firstNumber(row?.currentAccumulated, fallback);
+      if (num == null) return "s/d";
+      return formatPercent(normalizePercentNumber(num), Math.abs(normalizePercentNumber(num)) < 0.1 ? 1 : 0);
+    }
+
     function formatThousands(value, row) {
       const num = toNumber(value);
       if (num == null) return "s/d";
@@ -3900,7 +4195,9 @@
         addClosingSlide(pptx);
 
         const fileName = `Seguimiento_KPIs_${state.data.currentYear}_${normalize(state.selectedMonth).toLowerCase()}.pptx`;
-        await pptx.writeFile({ fileName });
+        const rawPptx = await pptx.write({ outputType: "blob" });
+        const repairedPptx = await repairPptxBlob(rawPptx);
+        downloadBlob(repairedPptx, fileName);
         showToast("PowerPoint generado.");
       } catch (error) {
         console.error(error);
@@ -3909,6 +4206,68 @@
         els.pptBtn.disabled = false;
         els.pptBtn.textContent = "Generar PPT";
       }
+    }
+
+    async function repairPptxBlob(blob) {
+      if (!window.JSZip) return blob;
+      const zip = await JSZip.loadAsync(blob);
+      const presentationFile = zip.file("ppt/presentation.xml");
+      if (presentationFile) {
+        let xml = await presentationFile.async("string");
+        xml = xml.replace(/<p:notesMasterIdLst[\s\S]*?<\/p:notesMasterIdLst>/g, "");
+        zip.file("ppt/presentation.xml", xml);
+      }
+
+      const contentTypesFile = zip.file("[Content_Types].xml");
+      if (contentTypesFile) {
+        let xml = await contentTypesFile.async("string");
+        xml = xml
+          .replace(/<Override PartName="\/ppt\/notesMasters\/[^"]+"[^>]*\/>/g, "")
+          .replace(/<Override PartName="\/ppt\/notesSlides\/[^"]+"[^>]*\/>/g, "");
+        zip.file("[Content_Types].xml", xml);
+      }
+
+      const relationshipNames = Object.keys(zip.files).filter(name => (
+        name === "ppt/_rels/presentation.xml.rels" ||
+        /^ppt\/slides\/_rels\/slide\d+\.xml\.rels$/.test(name)
+      ));
+      for (const name of relationshipNames) {
+        const relFile = zip.file(name);
+        if (!relFile) continue;
+        const xml = await relFile.async("string");
+        const fixed = xml.replace(/\s*<Relationship\b(?=[^>]*(?:notesMaster|notesSlide))[^>]*\/>/g, "");
+        if (fixed !== xml) zip.file(name, fixed);
+      }
+
+      Object.keys(zip.files)
+        .filter(name => name.startsWith("ppt/notesMasters/") || name.startsWith("ppt/notesSlides/"))
+        .forEach(name => zip.remove(name));
+
+      const slideNames = Object.keys(zip.files).filter(name => /^ppt\/slides\/slide\d+\.xml$/.test(name));
+      for (const name of slideNames) {
+        const slideFile = zip.file(name);
+        if (!slideFile) continue;
+        const xml = await slideFile.async("string");
+        const fixed = xml.replace(/<a:ext\b[^>]*>/g, tag => tag.replace(/\b(cx|cy)="-\d+"/g, "$1=\"0\""));
+        if (fixed !== xml) zip.file(name, fixed);
+      }
+
+      return zip.generateAsync({
+        type: "blob",
+        compression: "STORE",
+        mimeType: "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+      });
+    }
+
+    function downloadBlob(blob, fileName) {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
 
     function addCoverSlide(pptx) {
@@ -4042,30 +4401,117 @@
     function addClosingSlide(pptx) {
       const slide = newPptSlide(pptx);
       paintSlideBase(pptx, slide, "white");
-      slide.addText("Conclusiones y próximos pasos", {
-        x: 0.72, y: 1.1, w: 9.6, h: 0.55,
-        fontFace: "Montserrat", fontSize: 30, bold: true, color: BRAND.navy, margin: 0.02,
+      slide.addText("Conclusiones y acuerdos", {
+        x: 0.72, y: 0.98, w: 9.8, h: 0.46,
+        fontFace: "Montserrat", fontSize: 28, bold: true, color: BRAND.navy, margin: 0.02,
         fit: "shrink"
       });
       slide.addText(`${monthLabelFromKey(state.selectedMonth)} ${state.data.currentYear} · ${presentationArea()}`, {
-        x: 0.74, y: 1.68, w: 5.8, h: 0.24,
+        x: 0.74, y: 1.46, w: 5.8, h: 0.22,
         fontFace: "Montserrat", fontSize: 10, bold: true, color: BRAND.orange, margin: 0.02
       });
       const copy = state.closingNotes || state.globalNotes || "Sin conclusiones capturadas.";
       slide.addShape(pptx.ShapeType.rect, {
-        x: 0.74, y: 2.2, w: 0.08, h: 3.6,
-        fill: { color: BRAND.orange }, line: { color: BRAND.orange }
+        x: 0.74, y: 1.86, w: 11.86, h: 1.28,
+        fill: { color: BRAND.white }, line: { color: BRAND.line }, radius: 0.12
+      });
+      slide.addShape(pptx.ShapeType.rect, {
+        x: 0.74, y: 1.86, w: 0.08, h: 1.28,
+        fill: { color: BRAND.orange }, line: { color: BRAND.orange }, radius: 0.02
+      });
+      slide.addText("Conclusiones / acuerdos", {
+        x: 0.98, y: 2.03, w: 3.1, h: 0.13,
+        fontFace: "Montserrat", fontSize: 7.4, bold: true, color: BRAND.muted, margin: 0.01,
+        fit: "shrink"
       });
       slide.addText(copy, {
-        x: 1.08, y: 2.18, w: 10.9, h: 3.7,
-        fontFace: "Montserrat", fontSize: 22, bold: true, color: BRAND.ink, breakLine: false,
+        x: 0.98, y: 2.23, w: 11.28, h: 0.66,
+        fontFace: "Montserrat", fontSize: 13.6, bold: true, color: BRAND.ink, breakLine: false,
         fit: "shrink", margin: 0.04, valign: "top"
       });
+      addClosingActionsTable(pptx, slide, 0.74, 3.46, 11.86, 2.62);
       slide.addText("Seguimiento ejecutivo de indicadores", {
-        x: 0.76, y: 6.15, w: 4.8, h: 0.22,
+        x: 0.76, y: 6.32, w: 4.8, h: 0.18,
         fontFace: "Montserrat", fontSize: 9.5, bold: true, color: BRAND.muted, margin: 0.02
       });
       addEkuoraFooter(slide);
+    }
+
+    function addClosingActionsTable(pptx, slide, x, y, w, h) {
+      const columns = [
+        { label: "ACTIVIDAD", key: "activity", ratio: 2.6, limit: 96 },
+        { label: "RESPONSABLE", key: "owner", ratio: 1.45, limit: 38 },
+        { label: "FECHA DE CUMPLIMIENTO", key: "dueDate", ratio: 1.5, limit: 18 },
+        { label: "OBSERVACIONES", key: "observations", ratio: 2.75, limit: 110 }
+      ];
+      const captured = closingActionRows();
+      const maxRows = 6;
+      const rows = captured.slice(0, maxRows);
+      while (rows.length < Math.min(maxRows, Math.max(4, captured.length))) rows.push({});
+      const overflow = Math.max(0, captured.length - maxRows);
+      const noteH = overflow ? 0.18 : 0;
+      const headerH = 0.42;
+      const rowH = (h - headerH - noteH) / Math.max(rows.length, 1);
+      const total = columns.reduce((acc, col) => acc + col.ratio, 0);
+      const widths = columns.map(col => w * col.ratio / total);
+
+      slide.addText("Plan de acción", {
+        x, y: y - 0.26, w: 2.8, h: 0.16,
+        fontFace: "Montserrat", fontSize: 8.5, bold: true, color: BRAND.navy, margin: 0.01,
+        fit: "shrink"
+      });
+
+      let cx = x;
+      columns.forEach((col, idx) => {
+        const cw = widths[idx];
+        slide.addShape(pptx.ShapeType.rect, {
+          x: cx, y, w: cw, h: headerH,
+          fill: { color: idx === columns.length - 1 ? BRAND.slate : BRAND.navy },
+          line: { color: "000000", width: 0.4 }
+        });
+        slide.addText(col.label, {
+          x: cx + 0.04, y: y + 0.08, w: cw - 0.08, h: headerH - 0.12,
+          fontFace: "Montserrat", fontSize: 6.2, bold: true, color: BRAND.white,
+          align: "center", valign: "mid", margin: 0.01, fit: "shrink", breakLine: false
+        });
+        cx += cw;
+      });
+
+      rows.forEach((row, rowIdx) => {
+        let cellX = x;
+        const yy = y + headerH + rowIdx * rowH;
+        columns.forEach((col, colIdx) => {
+          const cw = widths[colIdx];
+          const raw = col.key === "dueDate" ? formatDate(row[col.key]) : row[col.key];
+          const value = shorten(raw || "", col.limit);
+          slide.addShape(pptx.ShapeType.rect, {
+            x: cellX, y: yy, w: cw, h: rowH,
+            fill: { color: rowIdx % 2 ? "F7FAFD" : BRAND.white },
+            line: { color: "000000", width: 0.28 }
+          });
+          slide.addText(value, {
+            x: cellX + 0.08, y: yy + 0.05, w: cw - 0.16, h: Math.max(0.12, rowH - 0.1),
+            fontFace: "Montserrat",
+            fontSize: colIdx === 2 ? 6.3 : 6.8,
+            bold: colIdx <= 2,
+            color: colIdx === 2 ? BRAND.orange : BRAND.ink,
+            align: colIdx === 2 ? "center" : "left",
+            valign: "mid",
+            margin: 0.01,
+            fit: "shrink",
+            breakLine: false
+          });
+          cellX += cw;
+        });
+      });
+
+      if (overflow) {
+        slide.addText(`+${overflow} actividades adicionales capturadas en la app.`, {
+          x, y: y + h - 0.14, w, h: 0.12,
+          fontFace: "Montserrat", fontSize: 6.8, bold: true, color: BRAND.orange,
+          align: "right", margin: 0.01, fit: "shrink"
+        });
+      }
     }
 
     function newPptSlide(pptx) {
@@ -4448,9 +4894,14 @@
     }
 
     function addCommentBox(pptx, slide, title, body, x, y, w, h) {
+      const compact = h < 0.68;
+      const titleY = y + (compact ? 0.06 : 0.14);
+      const bodyY = y + (compact ? 0.19 : 0.4);
+      const bodyH = Math.max(0.08, h - (compact ? 0.24 : 0.55));
+      const bodyFont = compact ? 6.4 : 10;
       slide.addShape(pptx.ShapeType.rect, { x, y, w, h, fill: { color: BRAND.white }, line: { color: BRAND.line }, radius: 0.12 });
-      slide.addText(title, { x: x + 0.18, y: y + 0.14, w: w - 0.36, h: 0.18, fontFace: "Montserrat", fontSize: 7.5, bold: true, color: BRAND.muted, margin: 0.01 });
-      slide.addText(body, { x: x + 0.2, y: y + 0.4, w: w - 0.4, h: h - 0.55, fontFace: "Montserrat", fontSize: 10, color: BRAND.ink, margin: 0.03, fit: "shrink", valign: "top" });
+      slide.addText(title, { x: x + 0.18, y: titleY, w: w - 0.36, h: compact ? 0.1 : 0.18, fontFace: "Montserrat", fontSize: compact ? 5.8 : 7.5, bold: true, color: BRAND.muted, margin: 0.01, fit: "shrink" });
+      slide.addText(body, { x: x + 0.2, y: bodyY, w: w - 0.4, h: bodyH, fontFace: "Montserrat", fontSize: bodyFont, color: BRAND.ink, margin: 0.03, fit: "shrink", valign: "top" });
     }
 
     function summaryMetrics() {
