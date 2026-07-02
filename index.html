@@ -1,0 +1,4489 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Seguimiento KPIs</title>
+  <link rel="icon" href="data:,">
+  <style>
+    :root {
+      --navy: #15212f;
+      --navy-2: #2e3a47;
+      --ink: #15212f;
+      --muted: #64748b;
+      --slate: #8296a9;
+      --orange: #d9891b;
+      --orange-2: #f28b00;
+      --green: #2e7d32;
+      --red: #b42318;
+      --sky: #ebf5fb;
+      --band: #e8edf5;
+      --paper: #f7f9fc;
+      --white: #ffffff;
+      --line: #d9e2ee;
+      --shadow: 0 18px 45px rgba(13, 28, 44, 0.10);
+      --shadow-soft: 0 10px 28px rgba(13, 28, 44, 0.08);
+      font-family: Montserrat, Aptos, Calibri, Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: linear-gradient(180deg, #f8fbff 0%, #eef4f8 100%);
+      font-family: Montserrat, Aptos, Calibri, Arial, sans-serif;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible,
+    .file-button:focus-visible {
+      outline: 3px solid rgba(217, 137, 27, 0.32);
+      outline-offset: 2px;
+    }
+
+    .app {
+      min-height: 100vh;
+    }
+
+    .brand-footer {
+      width: 100%;
+      margin-top: 26px;
+      background: #000000;
+      box-shadow: 0 -16px 36px rgba(21, 33, 47, 0.16);
+    }
+
+    .brand-footer img {
+      display: block;
+      width: 100%;
+      min-height: 54px;
+      max-height: 96px;
+      object-fit: cover;
+      object-position: left center;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 18px clamp(18px, 3vw, 40px);
+      color: var(--white);
+      background:
+        linear-gradient(90deg, #07131d 0%, #101d2a 58%, #15212f 100%);
+      box-shadow: 0 12px 30px rgba(13, 28, 44, 0.22);
+      border-bottom: 3px solid var(--orange);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 44px;
+      height: 44px;
+      flex: 0 0 44px;
+      border-radius: 8px;
+      background:
+        linear-gradient(90deg, transparent 0 31%, rgba(255,255,255,0.86) 31% 42%, transparent 42%),
+        linear-gradient(0deg, var(--orange) 0 38%, var(--slate) 38% 68%, var(--white) 68% 100%);
+      border: 1px solid rgba(255,255,255,0.28);
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      font-size: clamp(21px, 2.4vw, 32px);
+      font-weight: 800;
+      line-height: 1.05;
+    }
+
+    .period-label {
+      margin-top: 4px;
+      color: rgba(255,255,255,0.74);
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .file-input {
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      position: absolute;
+      pointer-events: none;
+    }
+
+    .button,
+    .file-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 40px;
+      padding: 0 14px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.25);
+      background: rgba(255,255,255,0.1);
+      color: var(--white);
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+    }
+
+    .button:hover,
+    .file-button:hover {
+      transform: translateY(-1px);
+      border-color: rgba(255,255,255,0.48);
+      background: rgba(255,255,255,0.17);
+    }
+
+    .button.primary,
+    .file-button.primary {
+      background: var(--orange);
+      border-color: var(--orange);
+      color: var(--navy);
+    }
+
+    .button.primary:hover,
+    .file-button.primary:hover {
+      background: #f09a16;
+      border-color: #f09a16;
+    }
+
+    main {
+      width: min(1480px, calc(100% - 32px));
+      margin: 22px auto 44px;
+    }
+
+    .control-band {
+      display: grid;
+      grid-template-columns: minmax(260px, 1.1fr) minmax(140px, 0.45fr) minmax(190px, 0.55fr) minmax(180px, 0.55fr) auto;
+      gap: 12px;
+      align-items: stretch;
+      margin-bottom: 18px;
+    }
+
+    .dropzone {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      min-height: 86px;
+      padding: 16px 18px;
+      border: 1px dashed #9db4c7;
+      border-radius: 8px;
+      background: var(--white);
+      box-shadow: var(--shadow);
+      transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+    }
+
+    .dropzone.dragover {
+      border-color: var(--orange);
+      background: #fff8ef;
+      box-shadow: 0 18px 42px rgba(217, 137, 27, 0.14);
+    }
+
+    .drop-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--navy);
+    }
+
+    .drop-meta {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .field {
+      min-height: 86px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 8px;
+      padding: 13px 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--white);
+      box-shadow: var(--shadow);
+      transition: border-color 160ms ease, box-shadow 160ms ease;
+    }
+
+    .field label,
+    .notes label {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    select,
+    input[type="date"],
+    input[type="search"],
+    input[type="text"] {
+      width: 100%;
+      min-width: 0;
+      min-height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      color: var(--ink);
+      background: var(--paper);
+      padding: 0 10px;
+      outline: none;
+    }
+
+    select:focus,
+    input[type="date"]:focus,
+    input[type="search"]:focus,
+    input[type="text"]:focus,
+    textarea:focus {
+      border-color: var(--orange);
+      box-shadow: 0 0 0 3px rgba(238, 137, 1, 0.14);
+    }
+
+    .export-box {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      align-items: stretch;
+    }
+
+    .export-box .button {
+      min-width: 132px;
+      color: var(--white);
+      border-color: var(--navy);
+      background: var(--navy);
+    }
+
+    .export-box .button.primary {
+      color: var(--navy);
+      border-color: var(--orange);
+      background: var(--orange);
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .visual-summary {
+      display: grid;
+      grid-template-columns: minmax(360px, 1fr) minmax(280px, 0.65fr);
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .visual-summary.compact {
+      grid-template-columns: minmax(320px, 1fr) minmax(220px, 0.55fr);
+      margin-bottom: 0;
+    }
+
+    .gauge-panel,
+    .traffic-panel {
+      min-height: 190px;
+      padding: 18px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: var(--white);
+      box-shadow: var(--shadow);
+    }
+
+    .visual-summary.compact .gauge-panel,
+    .visual-summary.compact .traffic-panel {
+      min-height: 150px;
+      box-shadow: none;
+      background: var(--paper);
+    }
+
+    .gauge-panel {
+      display: grid;
+      grid-template-columns: minmax(160px, 0.65fr) minmax(220px, 1fr);
+      gap: 16px;
+      align-items: center;
+    }
+
+    .gauge-panel span,
+    .traffic-panel > span {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .gauge-panel h2 {
+      margin-top: 6px;
+      color: var(--navy);
+      font-size: clamp(18px, 2vw, 26px);
+      line-height: 1.1;
+      font-weight: 800;
+    }
+
+    .gauge {
+      width: min(100%, 360px);
+      display: block;
+      margin-left: auto;
+    }
+
+    .traffic-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .traffic-item {
+      display: grid;
+      grid-template-columns: 18px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 10px;
+      min-height: 38px;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--paper);
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .traffic-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      box-shadow: 0 0 0 4px rgba(13, 28, 44, 0.06);
+    }
+
+    .traffic-count {
+      color: var(--navy);
+      font-size: 16px;
+      font-weight: 800;
+    }
+
+    .summary-card {
+      min-height: 118px;
+      padding: 18px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: var(--white);
+      box-shadow: var(--shadow);
+      transition: transform 160ms ease, box-shadow 160ms ease;
+    }
+
+    .summary-card:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 18px 38px rgba(13, 28, 44, 0.12);
+    }
+
+    .summary-card strong {
+      display: block;
+      color: var(--navy);
+      font-size: clamp(25px, 3vw, 42px);
+      line-height: 1;
+      margin-top: 9px;
+      font-weight: 800;
+    }
+
+    .summary-card span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .summary-card p {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .summary-card.score {
+      color: var(--white);
+      background: var(--navy);
+      border-color: var(--navy);
+    }
+
+    .summary-card.score strong,
+    .summary-card.score span,
+    .summary-card.score p {
+      color: var(--white);
+    }
+
+    .global-board {
+      overflow: hidden;
+      margin-bottom: 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--white);
+      box-shadow: var(--shadow);
+    }
+
+    .global-board-head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 20px 22px 16px;
+      border-bottom: 1px solid var(--line);
+      background:
+        linear-gradient(90deg, rgba(217, 137, 27, 0.12), transparent 32%),
+        #ffffff;
+    }
+
+    .global-board-head span {
+      display: block;
+      color: var(--orange);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .global-board-head h2 {
+      margin-top: 4px;
+      color: var(--navy);
+      font-size: clamp(20px, 2vw, 28px);
+      line-height: 1.05;
+      font-weight: 900;
+    }
+
+    .global-board-head p {
+      max-width: 520px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+      text-align: right;
+    }
+
+    .global-board-head p strong {
+      color: var(--navy);
+      font-weight: 900;
+    }
+
+    .global-board-scroll {
+      overflow: auto;
+      background: #ffffff;
+    }
+
+    .global-matrix {
+      width: 100%;
+      min-width: 1120px;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    .global-matrix th {
+      padding: 12px 8px;
+      border: 1px solid #000000;
+      color: #ffffff;
+      background: var(--navy);
+      font-size: 12px;
+      line-height: 1.18;
+      font-weight: 900;
+      text-align: center;
+      vertical-align: middle;
+    }
+
+    .global-matrix th:last-child {
+      background: var(--slate);
+    }
+
+    .global-matrix td {
+      min-height: 52px;
+      padding: 11px 8px;
+      border: 1px solid #000000;
+      color: #000000;
+      background: #ffffff;
+      font-size: 12px;
+      line-height: 1.2;
+      text-align: center;
+      vertical-align: middle;
+      overflow-wrap: anywhere;
+    }
+
+    .global-matrix td:first-child,
+    .global-matrix td:nth-child(2),
+    .global-matrix td:nth-child(4) {
+      font-weight: 800;
+    }
+
+    .global-matrix td:nth-child(2) {
+      text-transform: uppercase;
+    }
+
+    .global-matrix td:last-child {
+      background: #f1f1f1;
+      font-weight: 900;
+    }
+
+    .global-matrix .numeric {
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    .global-matrix .good-text {
+      color: #00bf2a;
+    }
+
+    .global-matrix .watch-text {
+      color: #d9891b;
+    }
+
+    .global-matrix .risk-text {
+      color: #ff0000;
+    }
+
+    .global-matrix .empty-text {
+      color: var(--muted);
+    }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: minmax(310px, 0.85fr) minmax(420px, 1.55fr);
+      gap: 22px;
+      align-items: start;
+    }
+
+    .kpi-column {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: linear-gradient(180deg, #ffffff 0%, #f4f7fb 100%);
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+
+    .kpi-column-header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+      padding: 0 2px 12px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .kpi-column-header span,
+    .capture-heading span {
+      display: block;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    .kpi-column-header h2,
+    .capture-heading h3 {
+      margin-top: 4px;
+      color: var(--navy);
+      font-size: 17px;
+      line-height: 1.12;
+      font-weight: 800;
+    }
+
+    .kpi-column-count {
+      flex: 0 0 auto;
+      color: var(--orange);
+      font-size: 12px;
+      font-weight: 800;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .kpi-list {
+      display: grid;
+      gap: 18px;
+      max-height: 700px;
+      overflow: auto;
+      padding: 2px 5px 6px 1px;
+    }
+
+    .kpi-card {
+      position: relative;
+      width: 100%;
+      min-height: 182px;
+      text-align: left;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-left: 5px solid var(--slate);
+      border-radius: 8px;
+      background: var(--white);
+      color: var(--ink);
+      box-shadow: var(--shadow-soft);
+      transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+    }
+
+    .kpi-card:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      right: 10px;
+      bottom: -10px;
+      left: 10px;
+      height: 1px;
+      background: #cfd9e6;
+    }
+
+    .kpi-card:hover,
+    .kpi-card.selected {
+      transform: translateY(-1px);
+      border-color: #b5c8d9;
+      border-left-color: var(--orange);
+      box-shadow: 0 16px 35px rgba(13, 28, 44, 0.14);
+    }
+
+    .kpi-card.selected {
+      background:
+        linear-gradient(180deg, #ffffff 0%, #fffaf2 100%);
+      box-shadow: 0 0 0 2px rgba(217, 137, 27, 0.18), 0 16px 35px rgba(13, 28, 44, 0.13);
+    }
+
+    .kpi-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .kpi-id,
+    .status {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 24px;
+      padding: 0 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .kpi-id {
+      color: var(--navy);
+      background: var(--sky);
+    }
+
+    .status.good {
+      color: #124f22;
+      background: #e6f4ea;
+    }
+
+    .status.watch {
+      color: #875500;
+      background: #fff3d8;
+    }
+
+    .status.risk {
+      color: #8f1d12;
+      background: #ffe6e2;
+    }
+
+    .status.empty {
+      color: var(--muted);
+      background: var(--band);
+    }
+
+    .kpi-card h3 {
+      font-size: 14px;
+      line-height: 1.24;
+      color: var(--navy);
+      font-weight: 800;
+      min-height: 34px;
+    }
+
+    .kpi-card p {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.33;
+      min-height: 32px;
+    }
+
+    .kpi-card .card-followup {
+      min-height: 0;
+      margin-top: 10px;
+      padding: 9px 10px;
+      border: 1px solid #e4c179;
+      border-radius: 8px;
+      color: var(--navy);
+      background: #fff8ef;
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1.3;
+    }
+
+    .mini-bars {
+      display: grid;
+      gap: 6px;
+      margin-top: 12px;
+    }
+
+    .card-signal {
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr);
+      gap: 10px;
+      align-items: center;
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid var(--line);
+    }
+
+    .mini-gauge {
+      width: 42px;
+      height: 30px;
+    }
+
+    .signal-copy {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .mini-row {
+      display: grid;
+      grid-template-columns: 58px minmax(0, 1fr) 54px;
+      gap: 8px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .track {
+      height: 8px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #edf2f7;
+    }
+
+    .fill {
+      height: 100%;
+      width: 0;
+      min-width: 2px;
+      border-radius: inherit;
+      background: var(--slate);
+      transition: width 260ms ease;
+    }
+
+    .detail-panel,
+    .notes {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--white);
+      box-shadow: var(--shadow);
+    }
+
+    .detail-panel {
+      overflow: hidden;
+    }
+
+    .detail-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 20px 22px;
+      color: var(--white);
+      background: var(--navy);
+    }
+
+    .detail-header h2 {
+      font-size: clamp(19px, 2vw, 28px);
+      line-height: 1.08;
+      font-weight: 800;
+    }
+
+    .detail-header p {
+      margin-top: 8px;
+      max-width: 780px;
+      color: rgba(255,255,255,0.75);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .detail-metric {
+      min-width: 128px;
+      text-align: right;
+    }
+
+    .detail-metric strong {
+      display: block;
+      font-size: 35px;
+      line-height: 1;
+      font-weight: 800;
+    }
+
+    .detail-metric span {
+      color: rgba(255,255,255,0.75);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .panel-body {
+      display: grid;
+      gap: 18px;
+      padding: 20px 22px 22px;
+    }
+
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(150px, 1fr));
+      gap: 10px;
+    }
+
+    .kpi-meta-grid {
+      display: grid;
+      grid-template-columns: minmax(220px, 1.6fr) repeat(6, minmax(92px, 0.7fr));
+      gap: 8px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: linear-gradient(180deg, #ffffff 0%, #f7f9fc 100%);
+    }
+
+    .kpi-meta-item {
+      min-height: 74px;
+      padding: 10px 11px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--white);
+    }
+
+    .kpi-meta-item.primary {
+      border-left: 5px solid var(--orange);
+    }
+
+    .kpi-meta-item span {
+      display: block;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .kpi-meta-item strong {
+      display: block;
+      margin-top: 7px;
+      color: var(--navy);
+      font-size: 18px;
+      line-height: 1.08;
+      font-weight: 800;
+      overflow-wrap: anywhere;
+    }
+
+    .kpi-meta-item.primary strong {
+      font-size: 14px;
+      line-height: 1.2;
+    }
+
+    .kpi-meta-item em {
+      display: block;
+      margin-top: 6px;
+      color: var(--muted);
+      font-style: normal;
+      font-size: 11px;
+      line-height: 1.25;
+    }
+
+    .metric-tile {
+      min-height: 104px;
+      padding: 14px;
+      border-radius: 8px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+    }
+
+    .metric-tile span {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .metric-tile strong {
+      display: block;
+      margin-top: 8px;
+      color: var(--navy);
+      font-size: 27px;
+      line-height: 1;
+      font-weight: 800;
+    }
+
+    .metric-tile .track {
+      margin-top: 12px;
+      height: 10px;
+    }
+
+    .chart-wrap {
+      min-height: 310px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: linear-gradient(180deg, #ffffff 0%, #f7f9fc 100%);
+      padding: 16px;
+    }
+
+    #monthlyChart {
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding-bottom: 2px;
+    }
+
+    .chart-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .chart-title h3 {
+      font-size: 14px;
+      color: var(--navy);
+      font-weight: 800;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 2px;
+      background: var(--slate);
+    }
+
+    .chart {
+      width: 100%;
+      min-width: 660px;
+      height: auto;
+      display: block;
+    }
+
+    .chart text {
+      font-family: Montserrat, Aptos, Calibri, Arial, sans-serif;
+      fill: var(--muted);
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .chart .bar-value {
+      font-size: 7.2px;
+      font-weight: 900;
+      paint-order: stroke;
+      stroke: #ffffff;
+      stroke-width: 2.4px;
+      stroke-linejoin: round;
+    }
+
+    .notes {
+      padding: 16px;
+      display: grid;
+      gap: 9px;
+    }
+
+    .capture-panel {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--white);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .capture-heading {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      background:
+        linear-gradient(90deg, rgba(238, 137, 1, 0.13) 0%, #ffffff 42%, #f5f8fc 100%);
+    }
+
+    .capture-heading .status {
+      margin-top: 1px;
+    }
+
+    .capture-panel .notes {
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+      background: transparent;
+    }
+
+    .capture-panel textarea {
+      min-height: 138px;
+      background: #ffffff;
+    }
+
+    .capture-layout {
+      display: grid;
+      grid-template-columns: minmax(380px, 1.18fr) minmax(260px, 0.72fr);
+      gap: 16px;
+      padding: 16px;
+    }
+
+    .nextsteps-block,
+    .evidence-block {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: linear-gradient(180deg, #ffffff 0%, #f7f9fc 100%);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.82);
+    }
+
+    .nextsteps-block {
+      display: grid;
+      gap: 14px;
+      padding: 16px;
+      background:
+        linear-gradient(180deg, rgba(238, 137, 1, 0.06), transparent 42%),
+        #ffffff;
+    }
+
+    .evidence-block {
+      padding: 14px;
+    }
+
+    .section-kicker {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #e8eef5;
+    }
+
+    .section-kicker span,
+    .nextstep-field label {
+      display: block;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .section-kicker strong {
+      display: block;
+      margin-top: 4px;
+      color: var(--navy);
+      font-size: 15px;
+      line-height: 1.12;
+      font-weight: 800;
+    }
+
+    .evidence-count {
+      color: var(--orange);
+      font-size: 11px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .nextstep-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(190px, 0.62fr);
+      gap: 12px;
+      align-items: start;
+    }
+
+    .nextstep-field {
+      display: grid;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .nextstep-field input,
+    .nextstep-field textarea {
+      border-color: #d8e1eb;
+      background: #ffffff;
+      font-weight: 700;
+      box-shadow: inset 0 1px 0 rgba(13, 28, 44, 0.02);
+    }
+
+    .nextstep-field textarea {
+      line-height: 1.35;
+      resize: vertical;
+    }
+
+    .nextstep-field input::placeholder,
+    .nextstep-field textarea::placeholder,
+    input::placeholder,
+    textarea::placeholder {
+      color: #93a4b8;
+      font-weight: 600;
+    }
+
+    .nextstep-field.date-field {
+      padding: 10px;
+      border: 1px solid #f0c888;
+      border-radius: 8px;
+      background: #fff8ef;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.9);
+    }
+
+    .nextstep-field.date-field input[type="date"] {
+      color: var(--navy);
+      border-color: #e7b564;
+      background: #ffffff;
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .nextstep-field.wide {
+      grid-column: 1 / -1;
+    }
+
+    .nextstep-field textarea {
+      min-height: 92px;
+    }
+
+    .nextstep-field textarea#kpiNotes {
+      min-height: 112px;
+    }
+
+    .evidence-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .evidence-button {
+      min-height: 36px;
+      color: var(--navy);
+      border-color: var(--orange);
+      background: var(--orange);
+      box-shadow: 0 8px 20px rgba(217, 137, 27, 0.18);
+    }
+
+    .evidence-help {
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.3;
+      text-align: right;
+    }
+
+    .evidence-gallery {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .evidence-item {
+      position: relative;
+      overflow: hidden;
+      min-height: 128px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--white);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .evidence-item img {
+      display: block;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      object-fit: cover;
+      background: var(--band);
+    }
+
+    .evidence-item footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      padding: 7px 8px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 800;
+    }
+
+    .evidence-remove {
+      min-width: 24px;
+      min-height: 24px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--red);
+      background: var(--white);
+      font-size: 14px;
+      line-height: 1;
+    }
+
+    .evidence-empty {
+      min-height: 118px;
+      display: grid;
+      place-items: center;
+      padding: 16px;
+      border: 1px dashed #a9bbca;
+      border-radius: 8px;
+      color: var(--muted);
+      background: #ffffff;
+      font-size: 12px;
+      font-weight: 800;
+      text-align: center;
+    }
+
+    .text-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .text-grid .notes {
+      margin: 0;
+    }
+
+    .strategy-note {
+      display: grid;
+      grid-template-columns: minmax(220px, 0.75fr) minmax(320px, 1.25fr);
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 18px;
+      padding: 18px 20px;
+      border: 1px solid var(--line);
+      border-left: 6px solid var(--orange);
+      border-radius: 8px;
+      background:
+        linear-gradient(90deg, rgba(217, 137, 27, 0.09), transparent 36%),
+        var(--white);
+      box-shadow: var(--shadow);
+    }
+
+    .strategy-note span {
+      display: block;
+      color: var(--orange);
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .strategy-note h2 {
+      margin-top: 4px;
+      color: var(--navy);
+      font-size: clamp(19px, 2vw, 27px);
+      line-height: 1.05;
+      font-weight: 900;
+    }
+
+    .strategy-note p {
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .strategy-split {
+      display: grid;
+      gap: 9px;
+    }
+
+    .split-bar {
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 3fr 1fr;
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f5f8fb;
+    }
+
+    .split-segment {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 0 14px;
+      color: var(--white);
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .split-segment.strategy {
+      background: var(--navy);
+    }
+
+    .split-segment.results {
+      background: var(--orange);
+      color: var(--navy);
+    }
+
+    .split-caption {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 96px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--ink);
+      background: var(--paper);
+      padding: 11px 12px;
+      line-height: 1.45;
+      outline: none;
+    }
+
+    .empty-state {
+      padding: 28px;
+      text-align: center;
+      color: var(--muted);
+      background: var(--white);
+      border-radius: 8px;
+      border: 1px solid var(--line);
+    }
+
+    .toast {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      z-index: 40;
+      max-width: min(420px, calc(100% - 40px));
+      padding: 12px 14px;
+      border-radius: 8px;
+      color: var(--white);
+      background: var(--navy);
+      box-shadow: 0 16px 40px rgba(13, 28, 44, 0.24);
+      font-size: 13px;
+      font-weight: 700;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(8px);
+      transition: opacity 180ms ease, transform 180ms ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 1120px) {
+      .control-band,
+      .content-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .export-box .button {
+        width: 100%;
+        min-height: 54px;
+      }
+
+      .kpi-list {
+        max-height: none;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 760px) {
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+        padding: 16px;
+      }
+
+      .top-actions {
+        width: 100%;
+        justify-content: stretch;
+      }
+
+      .top-actions .button,
+      .top-actions .file-button {
+        flex: 1 1 auto;
+      }
+
+      main {
+        width: min(100% - 20px, 1480px);
+        margin-top: 12px;
+      }
+
+      .brand-mark {
+        width: 38px;
+        height: 38px;
+        flex-basis: 38px;
+      }
+
+      .summary-grid,
+      .comparison-grid,
+      .kpi-meta-grid,
+      .kpi-list,
+      .text-grid,
+      .strategy-note,
+      .capture-layout,
+      .nextstep-grid,
+      .visual-summary,
+      .visual-summary.compact {
+        grid-template-columns: 1fr;
+      }
+
+      .gauge-panel {
+        grid-template-columns: 1fr;
+      }
+
+      .gauge {
+        margin: 0 auto;
+      }
+
+      .dropzone {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .detail-header {
+        flex-direction: column;
+      }
+
+      .detail-metric {
+        text-align: left;
+      }
+
+      .kpi-column {
+        padding: 12px;
+      }
+
+      .kpi-column-header,
+      .capture-heading {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .kpi-column-count {
+        text-align: left;
+      }
+
+      .capture-panel textarea {
+        min-height: 132px;
+      }
+
+      .capture-layout {
+        padding: 12px;
+      }
+
+      .chart-wrap {
+        padding: 12px;
+      }
+
+      .chart-title {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .kpi-card {
+        min-height: auto;
+      }
+
+      .evidence-actions,
+      .section-kicker {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .evidence-help {
+        text-align: left;
+      }
+
+      .evidence-gallery {
+        grid-template-columns: 1fr;
+      }
+
+      .split-caption {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"></div>
+        <div>
+          <h1>Seguimiento KPIs</h1>
+          <p class="period-label" id="periodLabel">Mayo 2026 - Planeación Estratégica</p>
+        </div>
+      </div>
+      <div class="top-actions">
+        <label class="file-button primary" for="excelInput" title="Cargar archivo Excel actualizado">Cargar Excel</label>
+        <input class="file-input" type="file" id="excelInput" accept=".xlsx,.xls,.xlsm">
+        <button class="button" id="resetNotesBtn" type="button" title="Limpiar comentarios guardados">Limpiar textos</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="control-band" aria-label="Controles del tablero">
+        <div class="dropzone" id="dropzone">
+          <div>
+            <p class="drop-title" id="fileName">RH2026.xlsx</p>
+            <p class="drop-meta" id="fileMeta">Arrastra el Excel actualizado o usa el botón de carga.</p>
+          </div>
+          <label class="file-button primary" for="excelInput" title="Seleccionar archivo Excel">Seleccionar</label>
+        </div>
+        <div class="field">
+          <label for="monthSelect">Mes</label>
+          <select id="monthSelect"></select>
+        </div>
+        <div class="field">
+          <label for="areaInput">Área</label>
+          <input id="areaInput" type="text" placeholder="Ej. Planeación Estratégica">
+        </div>
+        <div class="field">
+          <label for="searchInput">Buscar KPI</label>
+          <input id="searchInput" type="search" placeholder="Indicador, objetivo o comentario">
+        </div>
+        <div class="export-box">
+          <button class="button primary" id="pptBtn" type="button" title="Generar presentación PowerPoint con el formato ejecutivo">Generar PPT</button>
+        </div>
+      </section>
+
+      <section class="summary-grid" aria-label="Resumen del periodo">
+        <article class="summary-card score">
+          <span>Resultado ponderado</span>
+          <strong id="scoreValue">0%</strong>
+          <p id="scoreMeta">Suma de indicadores ponderados.</p>
+        </article>
+        <article class="summary-card">
+          <span>Cumplimiento promedio</span>
+          <strong id="avgValue">0%</strong>
+          <p id="avgMeta">Promedio simple de cumplimiento.</p>
+        </article>
+        <article class="summary-card">
+          <span>KPIs cargados</span>
+          <strong id="countValue">0</strong>
+          <p id="countMeta">Indicadores detectados desde Excel.</p>
+        </article>
+        <article class="summary-card">
+          <span>Alertas</span>
+          <strong id="riskValue">0</strong>
+          <p id="riskMeta">KPIs por debajo de presupuesto.</p>
+        </article>
+      </section>
+
+      <section class="visual-summary" aria-label="Semáforo y acelerómetro general">
+        <div class="gauge-panel">
+          <div>
+            <span>Acelerómetro general</span>
+            <h2 id="globalGaugeTitle">Cumplimiento ponderado</h2>
+          </div>
+          <div id="globalGauge"></div>
+        </div>
+        <div class="traffic-panel">
+          <span>Semáforo ejecutivo</span>
+          <div id="globalTraffic"></div>
+        </div>
+      </section>
+
+      <section class="text-grid" aria-label="Textos para presentación">
+        <div class="notes">
+          <label for="globalNotes">Comentario ejecutivo</label>
+          <textarea id="globalNotes" placeholder="Escribe el resumen para la lámina global."></textarea>
+        </div>
+        <div class="notes">
+          <label for="closingNotes">Conclusiones / acuerdos</label>
+          <textarea id="closingNotes" placeholder="Escribe conclusiones, acuerdos o próximos pasos para la lámina final."></textarea>
+        </div>
+      </section>
+
+      <section class="strategy-note" aria-label="Criterio editorial de la presentación">
+        <div>
+          <span>Criterio editorial</span>
+          <h2>75% estrategia / 25% resultados</h2>
+          <p>La narrativa debe priorizar decisiones, acciones y dirección estratégica; los resultados sirven como soporte ejecutivo.</p>
+        </div>
+        <div class="strategy-split" aria-hidden="true">
+          <div class="split-bar">
+            <div class="split-segment strategy"><strong>Estrategia</strong><strong>75%</strong></div>
+            <div class="split-segment results"><strong>Resultados</strong><strong>25%</strong></div>
+          </div>
+          <div class="split-caption">
+            <span>Decisiones, prioridades, riesgos y próximos pasos</span>
+            <span>Lectura numérica</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="global-board" aria-label="Tablero global de KPIs">
+        <div class="global-board-head">
+          <div>
+            <span>Tablero global</span>
+            <h2>Seguimiento ejecutivo por indicador</h2>
+          </div>
+          <p><strong>75% estrategia / 25% resultados.</strong> Vista consolidada para orientar decisiones, prioridades y próximos pasos.</p>
+        </div>
+        <div class="global-board-scroll">
+          <table class="global-matrix">
+            <thead>
+              <tr>
+                <th>Nombre del objetivo estratégico</th>
+                <th>Nombre del indicador (Métrica)</th>
+                <th>Unidad de medición</th>
+                <th>Fuente y emisor de la información para el cálculo</th>
+                <th>Acumulado</th>
+                <th>% mínimo requerido</th>
+                <th>Real % obtenido del periodo</th>
+                <th>% obtenido de cumplimiento del periodo</th>
+                <th>Peso de indicador</th>
+                <th>Real indicador</th>
+              </tr>
+            </thead>
+            <tbody id="globalMatrix"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="content-grid">
+        <aside class="kpi-column" aria-label="Lista de KPIs">
+          <div class="kpi-column-header">
+            <div>
+              <span>Listado</span>
+              <h2>Indicadores</h2>
+            </div>
+            <strong class="kpi-column-count" id="kpiListCount">0 KPIs</strong>
+          </div>
+          <div class="kpi-list" id="kpiCards" aria-label="Lista de KPIs"></div>
+        </aside>
+        <section class="detail-panel" aria-label="Detalle del KPI seleccionado">
+          <div class="detail-header">
+            <div>
+              <h2 id="detailTitle">Selecciona un KPI</h2>
+              <p id="detailSubtitle">Carga un archivo o elige un indicador de la lista.</p>
+            </div>
+            <div class="detail-metric">
+              <strong id="detailScore">0%</strong>
+              <span>Cumplimiento</span>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="kpi-meta-grid" id="kpiMetaGrid"></div>
+            <div class="comparison-grid" id="comparisonGrid"></div>
+            <div class="visual-summary compact" aria-label="Semáforo y acelerómetro del KPI">
+              <div class="gauge-panel">
+                <div>
+                  <span>Acelerómetro del KPI</span>
+                  <h2 id="kpiGaugeTitle">Cumplimiento</h2>
+                </div>
+                <div id="kpiGauge"></div>
+              </div>
+              <div class="traffic-panel">
+                <span>Semáforo del indicador</span>
+                <div id="kpiTraffic"></div>
+              </div>
+            </div>
+            <div class="chart-wrap">
+              <div class="chart-title">
+                <h3>Serie mensual</h3>
+                <div class="legend">
+                  <span><i class="dot" style="background:#7796ab"></i>Año anterior</span>
+                  <span><i class="dot" style="background:#0d1c2c"></i>Año actual</span>
+                  <span><i class="dot" style="background:#ee8901"></i>Presupuesto</span>
+                </div>
+              </div>
+              <div id="monthlyChart"></div>
+            </div>
+            <section class="capture-panel" aria-label="Captura del indicador">
+              <div class="capture-heading">
+                <div>
+                  <span>Captura y seguimiento</span>
+                  <h3 id="captureTitle">KPI seleccionado</h3>
+                </div>
+                <strong class="status empty" id="captureStatus">Sin dato</strong>
+              </div>
+              <div class="capture-layout">
+                <div class="nextsteps-block">
+                  <div class="section-kicker">
+                    <div>
+                      <span>Next steps</span>
+                      <strong>Plan de acción del indicador</strong>
+                    </div>
+                  </div>
+                  <div class="nextstep-grid">
+                    <div class="nextstep-field wide">
+                      <label for="nextStepAction">Acción clave</label>
+                      <textarea id="nextStepAction" placeholder="Define la acción concreta para mover este KPI."></textarea>
+                    </div>
+                    <div class="nextstep-field">
+                      <label for="nextStepOwner">Responsable</label>
+                      <input id="nextStepOwner" type="text" placeholder="Nombre o área">
+                    </div>
+                    <div class="nextstep-field date-field">
+                      <label for="nextStepDate">Fecha compromiso</label>
+                      <input id="nextStepDate" type="date">
+                    </div>
+                    <div class="nextstep-field wide">
+                      <label for="kpiNotes">Comentarios / contexto</label>
+                      <textarea id="kpiNotes" placeholder="Escribe comentarios, acuerdos, riesgos o contexto para este KPI."></textarea>
+                    </div>
+                  </div>
+                </div>
+                <div class="evidence-block">
+                  <div class="section-kicker">
+                    <div>
+                      <span>Evidencias</span>
+                      <strong>Fotos del avance</strong>
+                    </div>
+                    <span class="evidence-count" id="evidenceCount">0 fotos</span>
+                  </div>
+                  <div class="evidence-actions">
+                    <label class="file-button evidence-button" for="evidenceInput">Cargar fotos</label>
+                    <input id="evidenceInput" type="file" accept="image/*" multiple hidden>
+                    <p class="evidence-help">JPG, PNG o WebP. Máximo 4 por KPI.</p>
+                  </div>
+                  <div class="evidence-gallery" id="evidenceGallery"></div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </section>
+      </section>
+
+    </main>
+    <footer class="brand-footer" aria-label="Identidad Ekuora">
+      <img src="assets/ekuora_footer.png" alt="Ekuora">
+    </footer>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="assets/xlsx.full.min.js"></script>
+  <script src="assets/pptxgen.bundle.js"></script>
+  <script>
+    window.INITIAL_KPI_DATA = {
+  "selectedMonth": "MAYO",
+  "currentYear": 2026,
+  "rows": [
+    {
+      "id": "1",
+      "objective": "Factor Humano: Mejorar el clima organizacional/nom 35",
+      "metric": "Porcentaje de medición del clima laboral basado en la siguiente escala:",
+      "unit": "%",
+      "sourceComment": "SE APLICO EN EL MES DE Y SE OBTUVIERON RESULTADOS FAVORABLES ENTRE MUY ADECUADO Y ADECUADO Y EN NOM 35 SALIMOS SIN RIESGO ENTRE NULO Y BAJO",
+      "currentAccumulated": 0.25,
+      "budget": 0.8,
+      "current": 0.8,
+      "compliance": 1.0,
+      "weight": 0.25,
+      "weightedScore": 0.25,
+      "series": [
+        {
+          "month": "Enero",
+          "current": 0.8,
+          "previous": null
+        },
+        {
+          "month": "Febrero",
+          "current": 0.8,
+          "previous": null
+        },
+        {
+          "month": "Marzo",
+          "current": 0.8,
+          "previous": 0.25
+        },
+        {
+          "month": "Abril",
+          "current": 0.8,
+          "previous": 0.25
+        },
+        {
+          "month": "Mayo",
+          "current": 0.8,
+          "previous": 0.8
+        },
+        {
+          "month": "Junio",
+          "current": 0.0,
+          "previous": 0.8
+        },
+        {
+          "month": "Julio",
+          "current": 0.0,
+          "previous": 0.8
+        },
+        {
+          "month": "Agosto",
+          "current": 0.0,
+          "previous": 0.8
+        },
+        {
+          "month": "Septiembre",
+          "current": 0.0,
+          "previous": null
+        },
+        {
+          "month": "Octubre",
+          "current": 0.0,
+          "previous": null
+        },
+        {
+          "month": "Noviembre",
+          "current": 0.0,
+          "previous": null
+        },
+        {
+          "month": "Diciembre",
+          "current": 0.0,
+          "previous": null
+        }
+      ],
+      "previousBudget": 0.8,
+      "previous": 0.8,
+      "previousCompliance": 1.0,
+      "previousSeries": [
+        {
+          "month": "Enero",
+          "previous": null
+        },
+        {
+          "month": "Febrero",
+          "previous": null
+        },
+        {
+          "month": "Marzo",
+          "previous": 0.25
+        },
+        {
+          "month": "Abril",
+          "previous": 0.25
+        },
+        {
+          "month": "Mayo",
+          "previous": 0.8
+        },
+        {
+          "month": "Junio",
+          "previous": 0.8
+        },
+        {
+          "month": "Julio",
+          "previous": 0.8
+        },
+        {
+          "month": "Agosto",
+          "previous": 0.8
+        },
+        {
+          "month": "Septiembre",
+          "previous": null
+        },
+        {
+          "month": "Octubre",
+          "previous": null
+        },
+        {
+          "month": "Noviembre",
+          "previous": null
+        },
+        {
+          "month": "Diciembre",
+          "previous": null
+        }
+      ]
+    },
+    {
+      "id": "4",
+      "objective": "Aprendizaje y Conocimiento: Normatividad corporativa (Manual de organización: perfiles y descripciones, RIT, nom 35 , Código de ética y conducta, procesos y lineamientos)",
+      "metric": "documentos emitidos",
+      "unit": "#",
+      "sourceComment": "Se cumplio lo pactado para este semestre, para el proximo 2025 procedimientos RH enfocados a ISO 900, Código de ética y conducta y manual de organización y calidad",
+      "currentAccumulated": 0.2,
+      "budget": 1.0,
+      "current": 1.0,
+      "compliance": 1.0,
+      "weight": 0.2,
+      "weightedScore": 0.2,
+      "series": [
+        {
+          "month": "Enero",
+          "current": 1.0,
+          "previous": null
+        },
+        {
+          "month": "Febrero",
+          "current": 1.0,
+          "previous": null
+        },
+        {
+          "month": "Marzo",
+          "current": 1.0,
+          "previous": 0.2
+        },
+        {
+          "month": "Abril",
+          "current": 1.0,
+          "previous": 0.2
+        },
+        {
+          "month": "Mayo",
+          "current": 1.0,
+          "previous": 1.0
+        },
+        {
+          "month": "Junio",
+          "current": 0.0,
+          "previous": 1.0
+        },
+        {
+          "month": "Julio",
+          "current": 0.0,
+          "previous": 1.0
+        },
+        {
+          "month": "Agosto",
+          "current": 0.0,
+          "previous": 1.0
+        },
+        {
+          "month": "Septiembre",
+          "current": 0.0,
+          "previous": null
+        },
+        {
+          "month": "Octubre",
+          "current": 0.0,
+          "previous": null
+        },
+        {
+          "month": "Noviembre",
+          "current": 0.0,
+          "previous": null
+        },
+        {
+          "month": "Diciembre",
+          "current": 0.0,
+          "previous": null
+        }
+      ],
+      "previousBudget": 1.0,
+      "previous": 1.0,
+      "previousCompliance": 1.0,
+      "previousSeries": [
+        {
+          "month": "Enero",
+          "previous": null
+        },
+        {
+          "month": "Febrero",
+          "previous": null
+        },
+        {
+          "month": "Marzo",
+          "previous": 0.2
+        },
+        {
+          "month": "Abril",
+          "previous": 0.2
+        },
+        {
+          "month": "Mayo",
+          "previous": 1.0
+        },
+        {
+          "month": "Junio",
+          "previous": 1.0
+        },
+        {
+          "month": "Julio",
+          "previous": 1.0
+        },
+        {
+          "month": "Agosto",
+          "previous": 1.0
+        },
+        {
+          "month": "Septiembre",
+          "previous": null
+        },
+        {
+          "month": "Octubre",
+          "previous": null
+        },
+        {
+          "month": "Noviembre",
+          "previous": null
+        },
+        {
+          "month": "Diciembre",
+          "previous": null
+        }
+      ]
+    },
+    {
+      "id": "5",
+      "objective": "Aprendizaje y Conocimiento: Contar con mecanismos objetivos y claros de evaluación del desempeño que ayuden a mejorar la productividad de la empresa.",
+      "metric": "Resultados de la evaluación del desempeño",
+      "unit": "%",
+      "sourceComment": "HASTA EL MOMENTO NO SE TIENEN CONTRATOS PENDIENTES O FALTA DE EVA",
+      "currentAccumulated": 0.2,
+      "budget": 1.0,
+      "current": 1.0,
+      "compliance": 1.0,
+      "weight": 0.2,
+      "weightedScore": 0.2,
+      "series": [
+        {
+          "month": "Enero",
+          "current": 1.0,
+          "previous": null
+        },
+        {
+          "month": "Febrero",
+          "current": 1.0,
+          "previous": null
+        },
+        {
+          "month": "Marzo",
+          "current": 1.0,
+          "previous": 0.2
+        },
+        {
+          "month": "Abril",
+          "current": 1.0,
+          "previous": 0.2
+        },
+        {
+          "month": "Mayo",
+          "current": 1.0,
+          "previous": 1.0
+        },
+        {
+          "month": "Junio",
+          "current": 0.0,
+          "previous": 1.0
+        },
+        {
+          "month": "Julio",
+          "current": 0.0,
+          "previous": 1.0
+        },
+        {
+          "month": "Agosto",
+          "current": 0.0,
+          "previous": 1.0
+        },
+        {
+          "month": "Septiembre",
+          "current": 0.0,
+          "previous": null
+        },
+        {
+          "month": "Octubre",
+          "current": 0.0,
+          "previous": null
+        },
+        {
+          "month": "Noviembre",
+          "current": 0.0,
+          "previous": null
+        },
+        {
+          "month": "Diciembre",
+          "current": 0.0,
+          "previous": null
+        }
+      ],
+      "previousBudget": 1.0,
+      "previous": 1.0,
+      "previousCompliance": 1.0,
+      "previousSeries": [
+        {
+          "month": "Enero",
+          "previous": null
+        },
+        {
+          "month": "Febrero",
+          "previous": null
+        },
+        {
+          "month": "Marzo",
+          "previous": 0.2
+        },
+        {
+          "month": "Abril",
+          "previous": 0.2
+        },
+        {
+          "month": "Mayo",
+          "previous": 1.0
+        },
+        {
+          "month": "Junio",
+          "previous": 1.0
+        },
+        {
+          "month": "Julio",
+          "previous": 1.0
+        },
+        {
+          "month": "Agosto",
+          "previous": 1.0
+        },
+        {
+          "month": "Septiembre",
+          "previous": null
+        },
+        {
+          "month": "Octubre",
+          "previous": null
+        },
+        {
+          "month": "Noviembre",
+          "previous": null
+        },
+        {
+          "month": "Diciembre",
+          "previous": null
+        }
+      ]
+    },
+    {
+      "id": "3",
+      "objective": "Aprendizaje y Conocimiento:Dar cumplimiento al PAC, y mejorar las competencias del personal. Y servir como base para el plan de sucesión.",
+      "metric": "Cumplimiento al PAC (Plan anual de capacitación).",
+      "unit": "%",
+      "sourceComment": "DE LOS CURSOS COMPROMETIDOS PARA ESTE AÑO SE HA CUBIERTO LO CONVENIDO PARA EL PRIMER TRIMESTRE CON EVALUACIÓN ADECUADA.",
+      "currentAccumulated": 0.12,
+      "budget": 1.0,
+      "current": 0.8,
+      "compliance": 0.8,
+      "weight": 0.15,
+      "weightedScore": 0.12,
+      "series": [
+        {
+          "month": "Enero",
+          "current": 0.8,
+          "previous": null
+        },
+        {
+          "month": "Febrero",
+          "current": 0.8,
+          "previous": null
+        },
+        {
+          "month": "Marzo",
+          "current": 0.8,
+          "previous": 0.15
+        },
+        {
+          "month": "Abril",
+          "current": 0.8,
+          "previous": 0.15
+        },
+        {
+          "month": "Mayo",
+          "current": 0.8,
+          "previous": 1.0
+        },
+        {
+          "month": "Junio",
+          "current": 0.0,
+          "previous": 1.0
+        },
+        {
+          "month": "Julio",
+          "current": 0.0,
+          "previous": 1.0
+        },
+        {
+          "month": "Agosto",
+          "current": 0.0,
+          "previous": 1.0
+        },
+        {
+          "month": "Septiembre",
+          "current": 0.0,
+          "previous": null
+        },
+        {
+          "month": "Octubre",
+          "current": 0.0,
+          "previous": null
+        },
+        {
+          "month": "Noviembre",
+          "current": 0.0,
+          "previous": null
+        },
+        {
+          "month": "Diciembre",
+          "current": 0.0,
+          "previous": null
+        }
+      ],
+      "previousBudget": 1.0,
+      "previous": 1.0,
+      "previousCompliance": 1.0,
+      "previousSeries": [
+        {
+          "month": "Enero",
+          "previous": null
+        },
+        {
+          "month": "Febrero",
+          "previous": null
+        },
+        {
+          "month": "Marzo",
+          "previous": 0.15
+        },
+        {
+          "month": "Abril",
+          "previous": 0.15
+        },
+        {
+          "month": "Mayo",
+          "previous": 1.0
+        },
+        {
+          "month": "Junio",
+          "previous": 1.0
+        },
+        {
+          "month": "Julio",
+          "previous": 1.0
+        },
+        {
+          "month": "Agosto",
+          "previous": 1.0
+        },
+        {
+          "month": "Septiembre",
+          "previous": null
+        },
+        {
+          "month": "Octubre",
+          "previous": null
+        },
+        {
+          "month": "Noviembre",
+          "previous": null
+        },
+        {
+          "month": "Diciembre",
+          "previous": null
+        }
+      ]
+    },
+    {
+      "id": "2",
+      "objective": "Factor Humano: Bajar el índice de Rotación del personal de PORTAWARE",
+      "metric": "índice de rotación",
+      "unit": "%",
+      "sourceComment": "ESTE INDICADOR SE MEDIRA DE MANERA SEMESTRAL, Un índice menor al 15% se considera una rotación sana. Si la tasa es de entre 15 y 30% representa una pérdida considerable de capital humano. Mientras que una tasa superior al 40% señala un estado de gravedad en cuanto a la gestión de ingresos y salidas en la organización",
+      "currentAccumulated": 0.0,
+      "budget": 0.01,
+      "current": 0.0,
+      "compliance": null,
+      "weight": 0.1,
+      "weightedScore": 0.0,
+      "series": [
+        {
+          "month": "Enero",
+          "current": 0.0,
+          "previous": null
+        },
+        {
+          "month": "Febrero",
+          "current": 0.0,
+          "previous": null
+        },
+        {
+          "month": "Marzo",
+          "current": 0.0,
+          "previous": 0.13333333333333333
+        },
+        {
+          "month": "Abril",
+          "current": 0.0,
+          "previous": 0.13333333333333333
+        },
+        {
+          "month": "Mayo",
+          "current": 0.0,
+          "previous": 0.132
+        },
+        {
+          "month": "Junio",
+          "current": 0.0,
+          "previous": 0.132
+        },
+        {
+          "month": "Julio",
+          "current": 0.0,
+          "previous": 0.132
+        },
+        {
+          "month": "Agosto",
+          "current": 0.0,
+          "previous": 0.132
+        },
+        {
+          "month": "Septiembre",
+          "current": 0.0,
+          "previous": null
+        },
+        {
+          "month": "Octubre",
+          "current": 0.0,
+          "previous": null
+        },
+        {
+          "month": "Noviembre",
+          "current": 0.0,
+          "previous": null
+        },
+        {
+          "month": "Diciembre",
+          "current": 0.0,
+          "previous": null
+        }
+      ],
+      "previousBudget": 0.12,
+      "previous": 0.132,
+      "previousCompliance": 0.9090909090909091,
+      "previousSeries": [
+        {
+          "month": "Enero",
+          "previous": null
+        },
+        {
+          "month": "Febrero",
+          "previous": null
+        },
+        {
+          "month": "Marzo",
+          "previous": 0.13333333333333333
+        },
+        {
+          "month": "Abril",
+          "previous": 0.13333333333333333
+        },
+        {
+          "month": "Mayo",
+          "previous": 0.132
+        },
+        {
+          "month": "Junio",
+          "previous": 0.132
+        },
+        {
+          "month": "Julio",
+          "previous": 0.132
+        },
+        {
+          "month": "Agosto",
+          "previous": 0.132
+        },
+        {
+          "month": "Septiembre",
+          "previous": null
+        },
+        {
+          "month": "Octubre",
+          "previous": null
+        },
+        {
+          "month": "Noviembre",
+          "previous": null
+        },
+        {
+          "month": "Diciembre",
+          "previous": null
+        }
+      ]
+    },
+    {
+      "id": "6",
+      "objective": "Aprendizaje y Crecimiento :Mejorar las competencias de los niveles de mando en el tema de liderazgo efectivo por medio de capacitación y seguimiento.",
+      "metric": "Programa de seguimiento vs cumplimiento",
+      "unit": "%",
+      "sourceComment": "SE IMPLEMENTARON LOS PRIMEROS 2 CURSOS DE GERENTES Y MANDOS MEDIOS",
+      "currentAccumulated": 0.08000000000000002,
+      "budget": 1.0,
+      "current": 0.8,
+      "compliance": 0.8,
+      "weight": 0.1,
+      "weightedScore": 0.08000000000000002,
+      "series": [
+        {
+          "month": "Enero",
+          "current": 0.8,
+          "previous": null
+        },
+        {
+          "month": "Febrero",
+          "current": 0.8,
+          "previous": null
+        },
+        {
+          "month": "Marzo",
+          "current": 0.8,
+          "previous": 0.0
+        },
+        {
+          "month": "Abril",
+          "current": 0.8,
+          "previous": 0.0
+        },
+        {
+          "month": "Mayo",
+          "current": 0.8,
+          "previous": 0.2
+        },
+        {
+          "month": "Junio",
+          "current": 0.0,
+          "previous": 0.2
+        },
+        {
+          "month": "Julio",
+          "current": 0.0,
+          "previous": 0.2
+        },
+        {
+          "month": "Agosto",
+          "current": 0.0,
+          "previous": 0.2
+        },
+        {
+          "month": "Septiembre",
+          "current": 0.0,
+          "previous": null
+        },
+        {
+          "month": "Octubre",
+          "current": 0.0,
+          "previous": null
+        },
+        {
+          "month": "Noviembre",
+          "current": 0.0,
+          "previous": null
+        },
+        {
+          "month": "Diciembre",
+          "current": 0.0,
+          "previous": null
+        }
+      ],
+      "previousBudget": 1.0,
+      "previous": 0.2,
+      "previousCompliance": 0.2,
+      "previousSeries": [
+        {
+          "month": "Enero",
+          "previous": null
+        },
+        {
+          "month": "Febrero",
+          "previous": null
+        },
+        {
+          "month": "Marzo",
+          "previous": 0.0
+        },
+        {
+          "month": "Abril",
+          "previous": 0.0
+        },
+        {
+          "month": "Mayo",
+          "previous": 0.2
+        },
+        {
+          "month": "Junio",
+          "previous": 0.2
+        },
+        {
+          "month": "Julio",
+          "previous": 0.2
+        },
+        {
+          "month": "Agosto",
+          "previous": 0.2
+        },
+        {
+          "month": "Septiembre",
+          "previous": null
+        },
+        {
+          "month": "Octubre",
+          "previous": null
+        },
+        {
+          "month": "Noviembre",
+          "previous": null
+        },
+        {
+          "month": "Diciembre",
+          "previous": null
+        }
+      ]
+    }
+  ],
+  "process": "Planeación Estratégica",
+  "owner": "Veronica Silva",
+  "sourceFile": "RH2026.xlsx"
+}
+;
+  </script>
+  <script>
+    const MONTHS = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"];
+    const MONTH_LABELS = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+    const COMMENT_STORAGE = "rhKpiTracker.comments.v1";
+    const NEXT_STEP_STORAGE = "rhKpiTracker.nextSteps.v1";
+    const EVIDENCE_STORAGE = "rhKpiTracker.evidence.v1";
+    const GLOBAL_STORAGE = "rhKpiTracker.globalNotes.v1";
+    const CLOSING_STORAGE = "rhKpiTracker.closingNotes.v1";
+    const AREA_STORAGE = "rhKpiTracker.area.v2";
+    const MAX_EVIDENCE_PER_KPI = 4;
+    const EKUORA_FOOTER_IMAGE = "data:image/png;base64,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";
+    const BRAND = {
+      navy: "15212F",
+      navy2: "2E3A47",
+      ink: "15212F",
+      muted: "64748B",
+      slate: "8296A9",
+      orange: "D9891B",
+      green: "2E7D32",
+      yellow: "F2B705",
+      red: "B42318",
+      sky: "EBF5FB",
+      band: "E8EDF5",
+      paper: "F7F9FC",
+      white: "FFFFFF",
+      line: "D9E2EE"
+    };
+
+    const state = {
+      data: prepareData(window.INITIAL_KPI_DATA || {}),
+      selectedId: null,
+      selectedMonth: null,
+      comments: loadJson(COMMENT_STORAGE, {}),
+      nextSteps: loadJson(NEXT_STEP_STORAGE, {}),
+      evidence: loadJson(EVIDENCE_STORAGE, {}),
+      globalNotes: localStorage.getItem(GLOBAL_STORAGE) || "",
+      closingNotes: localStorage.getItem(CLOSING_STORAGE) || "",
+      area: localStorage.getItem(AREA_STORAGE) || "",
+      search: ""
+    };
+
+    const els = {
+      excelInput: document.getElementById("excelInput"),
+      dropzone: document.getElementById("dropzone"),
+      fileName: document.getElementById("fileName"),
+      fileMeta: document.getElementById("fileMeta"),
+      periodLabel: document.getElementById("periodLabel"),
+      monthSelect: document.getElementById("monthSelect"),
+      areaInput: document.getElementById("areaInput"),
+      searchInput: document.getElementById("searchInput"),
+      pptBtn: document.getElementById("pptBtn"),
+      resetNotesBtn: document.getElementById("resetNotesBtn"),
+      globalNotes: document.getElementById("globalNotes"),
+      closingNotes: document.getElementById("closingNotes"),
+      scoreValue: document.getElementById("scoreValue"),
+      scoreMeta: document.getElementById("scoreMeta"),
+      avgValue: document.getElementById("avgValue"),
+      avgMeta: document.getElementById("avgMeta"),
+      countValue: document.getElementById("countValue"),
+      countMeta: document.getElementById("countMeta"),
+      riskValue: document.getElementById("riskValue"),
+      riskMeta: document.getElementById("riskMeta"),
+      kpiCards: document.getElementById("kpiCards"),
+      kpiListCount: document.getElementById("kpiListCount"),
+      globalMatrix: document.getElementById("globalMatrix"),
+      detailTitle: document.getElementById("detailTitle"),
+      detailSubtitle: document.getElementById("detailSubtitle"),
+      detailScore: document.getElementById("detailScore"),
+      kpiMetaGrid: document.getElementById("kpiMetaGrid"),
+      globalGauge: document.getElementById("globalGauge"),
+      globalTraffic: document.getElementById("globalTraffic"),
+      kpiGaugeTitle: document.getElementById("kpiGaugeTitle"),
+      kpiGauge: document.getElementById("kpiGauge"),
+      kpiTraffic: document.getElementById("kpiTraffic"),
+      comparisonGrid: document.getElementById("comparisonGrid"),
+      monthlyChart: document.getElementById("monthlyChart"),
+      captureTitle: document.getElementById("captureTitle"),
+      captureStatus: document.getElementById("captureStatus"),
+      nextStepAction: document.getElementById("nextStepAction"),
+      nextStepOwner: document.getElementById("nextStepOwner"),
+      nextStepDate: document.getElementById("nextStepDate"),
+      kpiNotes: document.getElementById("kpiNotes"),
+      evidenceInput: document.getElementById("evidenceInput"),
+      evidenceCount: document.getElementById("evidenceCount"),
+      evidenceGallery: document.getElementById("evidenceGallery"),
+      toast: document.getElementById("toast")
+    };
+
+    boot();
+
+    function boot() {
+      state.selectedMonth = normalizeMonth(state.data.selectedMonth) || "MAYO";
+      state.selectedId = state.data.rows[0]?.id || null;
+      state.area = state.area || state.data.process || "Planeación Estratégica";
+      els.areaInput.value = state.area;
+      els.globalNotes.value = state.globalNotes;
+      els.closingNotes.value = state.closingNotes;
+      bindEvents();
+      render();
+    }
+
+    function bindEvents() {
+      els.excelInput.addEventListener("change", event => {
+        const file = event.target.files?.[0];
+        if (file) loadExcelFile(file);
+      });
+
+      ["dragenter", "dragover"].forEach(name => {
+        els.dropzone.addEventListener(name, event => {
+          event.preventDefault();
+          els.dropzone.classList.add("dragover");
+        });
+      });
+
+      ["dragleave", "drop"].forEach(name => {
+        els.dropzone.addEventListener(name, event => {
+          event.preventDefault();
+          els.dropzone.classList.remove("dragover");
+        });
+      });
+
+      els.dropzone.addEventListener("drop", event => {
+        const file = event.dataTransfer?.files?.[0];
+        if (file) loadExcelFile(file);
+      });
+
+      els.monthSelect.addEventListener("change", event => {
+        state.selectedMonth = normalizeMonth(event.target.value);
+        render();
+      });
+
+      els.areaInput.addEventListener("input", event => {
+        state.area = clean(event.target.value) || state.data.process || "Planeación Estratégica";
+        localStorage.setItem(AREA_STORAGE, state.area);
+        renderHeader();
+      });
+
+      els.searchInput.addEventListener("input", event => {
+        state.search = event.target.value.trim();
+        renderCards();
+      });
+
+      els.globalNotes.addEventListener("input", event => {
+        state.globalNotes = event.target.value;
+        localStorage.setItem(GLOBAL_STORAGE, state.globalNotes);
+      });
+
+      els.closingNotes.addEventListener("input", event => {
+        state.closingNotes = event.target.value;
+        localStorage.setItem(CLOSING_STORAGE, state.closingNotes);
+      });
+
+      els.kpiNotes.addEventListener("input", event => {
+        const row = getSelectedRow();
+        if (!row) return;
+        state.comments[row.key] = event.target.value;
+        saveJson(COMMENT_STORAGE, state.comments);
+        renderCards();
+      });
+
+      [els.nextStepAction, els.nextStepOwner, els.nextStepDate].forEach(input => {
+        input.addEventListener("input", () => {
+          const row = getSelectedRow();
+          if (!row) return;
+          state.nextSteps[row.key] = {
+            action: els.nextStepAction.value,
+            owner: els.nextStepOwner.value,
+            dueDate: els.nextStepDate.value
+          };
+          saveJson(NEXT_STEP_STORAGE, state.nextSteps);
+          renderCards();
+        });
+      });
+
+      els.evidenceInput.addEventListener("change", async event => {
+        const row = getSelectedRow();
+        const files = Array.from(event.target.files || []).filter(file => file.type.startsWith("image/"));
+        if (!row || !files.length) {
+          event.target.value = "";
+          return;
+        }
+        const current = evidenceFor(row);
+        const slots = MAX_EVIDENCE_PER_KPI - current.length;
+        if (slots <= 0) {
+          showToast(`Máximo ${MAX_EVIDENCE_PER_KPI} fotos por KPI.`);
+          event.target.value = "";
+          return;
+        }
+        const selected = files.slice(0, slots);
+        try {
+          const prepared = await Promise.all(selected.map(fileToEvidence));
+          state.evidence[row.key] = [...current, ...prepared];
+          if (!saveJson(EVIDENCE_STORAGE, state.evidence)) {
+            state.evidence[row.key] = current;
+          }
+          renderEvidence(row);
+          renderCards();
+          showToast(`${prepared.length} foto${prepared.length === 1 ? "" : "s"} cargada${prepared.length === 1 ? "" : "s"}.`);
+        } catch (error) {
+          console.error(error);
+          showToast("No se pudieron cargar las fotos.");
+        } finally {
+          event.target.value = "";
+        }
+      });
+
+      els.evidenceGallery.addEventListener("click", event => {
+        const button = event.target.closest("[data-remove-evidence]");
+        const row = getSelectedRow();
+        if (!button || !row) return;
+        state.evidence[row.key] = evidenceFor(row).filter(item => item.id !== button.dataset.removeEvidence);
+        saveJson(EVIDENCE_STORAGE, state.evidence);
+        renderEvidence(row);
+        renderCards();
+      });
+
+      els.pptBtn.addEventListener("click", exportPresentation);
+      els.resetNotesBtn.addEventListener("click", () => {
+        if (!confirm("¿Limpiar comentarios, next steps y fotos guardadas en este navegador?")) return;
+        state.comments = {};
+        state.nextSteps = {};
+        state.evidence = {};
+        state.globalNotes = "";
+        state.closingNotes = "";
+        localStorage.removeItem(COMMENT_STORAGE);
+        localStorage.removeItem(NEXT_STEP_STORAGE);
+        localStorage.removeItem(EVIDENCE_STORAGE);
+        localStorage.removeItem(GLOBAL_STORAGE);
+        localStorage.removeItem(CLOSING_STORAGE);
+        els.globalNotes.value = "";
+        els.closingNotes.value = "";
+        render();
+        showToast("Capturas locales limpiadas.");
+      });
+    }
+
+    async function loadExcelFile(file) {
+      try {
+        if (!window.XLSX) throw new Error("No se encontró el lector de Excel.");
+        const buffer = await file.arrayBuffer();
+        const workbook = XLSX.read(buffer, { type: "array", cellDates: true });
+        state.data = prepareData(parseWorkbook(workbook, file.name));
+        state.selectedMonth = normalizeMonth(state.data.selectedMonth) || latestMonthWithData(state.data.rows) || "MAYO";
+        state.selectedId = state.data.rows[0]?.id || null;
+        render();
+        showToast(`Archivo cargado: ${file.name}`);
+      } catch (error) {
+        console.error(error);
+        showToast(`No se pudo leer el Excel: ${error.message}`);
+      } finally {
+        els.excelInput.value = "";
+      }
+    }
+
+    function parseWorkbook(workbook, fileName) {
+      const kpisName = findSheetName(workbook, ["KPIS"]) || workbook.SheetNames.find(name => {
+        if (isAuxiliarySheetName(name)) return false;
+        const rows = sheetRows(workbook, name);
+        return findHeaderRow(rows, ["NOMBRE DEL OBJETIVO", "NOMBRE DEL INDICADOR"]) >= 0;
+      });
+      if (!kpisName) throw new Error("No encontré una hoja KPIS con encabezados reconocibles.");
+
+      const rows = sheetRows(workbook, kpisName);
+      const headerIndex = findHeaderRow(rows, ["NOMBRE DEL OBJETIVO", "NOMBRE DEL INDICADOR"]);
+      if (headerIndex < 0) throw new Error("No encontré encabezados de indicadores en la hoja KPIS.");
+
+      const headers = rows[headerIndex].map(clean);
+      const col = {
+        no: findCol(headers, ["NO.", "NO", "FOLIO"]),
+        objective: findCol(headers, ["NOMBRE DEL OBJETIVO ESTRATEGICO", "NOMBRE DEL OBJETIVO"]),
+        metric: findCol(headers, ["NOMBRE DEL INDICADOR", "METRICA"]),
+        unit: findCol(headers, ["UNIDAD DE MEDICION", "UNIDAD"]),
+        source: findCol(headers, ["FUENTE Y EMISOR", "NEXT STEPS", "COMMENTS"]),
+        accumulated: findCol(headers, ["ACUMULADO"]),
+        budget: findCol(headers, ["%MINIMO REQUERIDO", "MINIMO REQUERIDO", "PTTO", "PRESUPUESTO"]),
+        current: findCol(headers, ["REAL % OBTENIDO DEL PERIODO", "REAL % OBTENIDO"]),
+        compliance: findCol(headers, ["% OBTENIDO DE CUMPLIMIENTO", "CUMPLIMIENTO"]),
+        weight: findCol(headers, ["PESO DE INDICADOR", "PESO"]),
+        weighted: findCol(headers, ["REAL INDICADOR"])
+      };
+      const monthCols = monthColumnMap(headers);
+      const config = extractConfig(workbook, rows);
+      const currentRows = [];
+
+      for (let rowIndex = headerIndex + 1; rowIndex < rows.length; rowIndex += 1) {
+        const row = rows[rowIndex] || [];
+        const id = clean(row[col.no]) || String(currentRows.length + 1);
+        const objective = clean(row[col.objective]);
+        const metric = clean(row[col.metric]);
+        if (!isKpiDataRow({ id, objective, metric })) continue;
+
+        const series = MONTHS.map((month, idx) => ({
+          month: MONTH_LABELS[idx],
+          current: toNumber(row[monthCols[month]])
+        }));
+        const current = firstNumber(toNumber(row[col.current]), valueForMonth(series, config.selectedMonth, "current"), toNumber(row[col.accumulated]));
+        const budget = toNumber(row[col.budget]);
+        const compliance = firstNumber(normalizeRatioNumber(row[col.compliance]), computeCompliance(current, budget, metric));
+        const weight = normalizeRatioNumber(row[col.weight]);
+
+        currentRows.push({
+          id,
+          objective,
+          metric,
+          unit: clean(row[col.unit]),
+          sourceComment: clean(row[col.source]),
+          currentAccumulated: toNumber(row[col.accumulated]),
+          budget,
+          current,
+          compliance,
+          weight,
+          weightedScore: firstNumber(normalizeRatioNumber(row[col.weighted]), weight != null && compliance != null ? weight * compliance : null),
+          series
+        });
+      }
+
+      const previous = parsePreviousYear(workbook, config.currentYear);
+      const mergedRows = currentRows.map(row => mergePrevious(row, previous));
+      return {
+        process: "Planeación Estratégica",
+        selectedMonth: config.selectedMonth || latestMonthWithData(mergedRows) || "MAYO",
+        currentYear: config.currentYear || new Date().getFullYear(),
+        previousYear: (config.currentYear || new Date().getFullYear()) - 1,
+        sourceFile: fileName,
+        rows: mergedRows
+      };
+    }
+
+    function parsePreviousYear(workbook, currentYear) {
+      const expectedYear = String((currentYear || new Date().getFullYear()) - 1);
+      const previousName = workbook.SheetNames.find(name => !isAuxiliarySheetName(name) && normalize(name).includes(`${expectedYear} KPI`))
+        || workbook.SheetNames.find(name => !isAuxiliarySheetName(name) && normalize(name).includes(expectedYear) && normalize(name).includes("KPI"));
+      if (!previousName) return new Map();
+
+      const rows = sheetRows(workbook, previousName);
+      const headerIndex = findHeaderRow(rows, ["NOMBRE DEL OBJETIVO", "NOMBRE DEL INDICADOR"]);
+      if (headerIndex < 0) return new Map();
+      const headers = rows[headerIndex].map(clean);
+      const col = {
+        objective: findCol(headers, ["NOMBRE DEL OBJETIVO ESTRATEGICO", "NOMBRE DEL OBJETIVO"]),
+        metric: findCol(headers, ["NOMBRE DEL INDICADOR", "METRICA"]),
+        budget: findCol(headers, ["%MINIMO REQUERIDO", "MINIMO REQUERIDO", "PTTO", "PRESUPUESTO"]),
+        current: findCol(headers, ["REAL % OBTENIDO DEL PERIODO", "REAL % OBTENIDO"]),
+        compliance: findCol(headers, ["% OBTENIDO DE CUMPLIMIENTO", "CUMPLIMIENTO"])
+      };
+      const monthCols = monthColumnMap(headers);
+      const map = new Map();
+      for (let rowIndex = headerIndex + 1; rowIndex < rows.length; rowIndex += 1) {
+        const row = rows[rowIndex] || [];
+        const objective = clean(row[col.objective]);
+        const metric = clean(row[col.metric]);
+        if (!isKpiDataRow({ objective, metric })) continue;
+        const previousSeries = MONTHS.map((month, idx) => ({
+          month: MONTH_LABELS[idx],
+          previous: toNumber(row[monthCols[month]])
+        }));
+        const record = {
+          previous: toNumber(row[col.current]),
+          previousBudget: toNumber(row[col.budget]),
+          previousCompliance: normalizeRatioNumber(row[col.compliance]),
+          previousSeries
+        };
+        map.set(kpiKey(metric || objective), record);
+        map.set(kpiKey(objective || metric), record);
+      }
+      return map;
+    }
+
+    function mergePrevious(row, previousMap) {
+      const match = previousMap.get(kpiKey(row.metric || row.objective)) || previousMap.get(kpiKey(row.objective || row.metric));
+      if (!match) return row;
+      const previousByMonth = new Map((match.previousSeries || []).map(point => [normalizeMonth(point.month), point.previous]));
+      return {
+        ...row,
+        previous: match.previous,
+        previousBudget: match.previousBudget,
+        previousCompliance: match.previousCompliance,
+        series: row.series.map(point => ({
+          ...point,
+          previous: previousByMonth.get(normalizeMonth(point.month))
+        }))
+      };
+    }
+
+    function extractConfig(workbook, kpiRows) {
+      const cambiarMes = findSheetName(workbook, ["CAMBIAR MES", "MES"]);
+      const configRows = cambiarMes ? sheetRows(workbook, cambiarMes) : [];
+      const allRows = [...configRows, ...kpiRows];
+      let selectedMonth = null;
+      let currentYear = null;
+
+      for (const row of allRows) {
+        for (const cell of row || []) {
+          const month = normalizeMonth(cell);
+          if (month) selectedMonth = selectedMonth || month;
+          const num = toNumber(cell);
+          if (num && num > 2000 && num < 2100) currentYear = Math.round(num);
+        }
+      }
+      return { selectedMonth, currentYear };
+    }
+
+    function prepareData(data) {
+      const rows = (data.rows || []).map((row, index) => {
+        const id = clean(row.id) || String(index + 1);
+        const series = MONTH_LABELS.map((month, monthIndex) => {
+          const existing = (row.series || []).find(point => normalizeMonth(point.month) === MONTHS[monthIndex]) || {};
+          return {
+            month,
+            current: toNumber(existing.current),
+            previous: toNumber(existing.previous)
+          };
+        });
+        const prepared = {
+          ...row,
+          id,
+          objective: clean(row.objective),
+          metric: clean(row.metric),
+          unit: clean(row.unit),
+          sourceComment: clean(row.sourceComment),
+          current: toNumber(row.current),
+          previous: toNumber(row.previous),
+          budget: toNumber(row.budget),
+          compliance: normalizeRatioNumber(row.compliance),
+          weight: normalizeRatioNumber(row.weight),
+          weightedScore: normalizeRatioNumber(row.weightedScore),
+          series
+        };
+        prepared.key = kpiKey(`${prepared.id} ${prepared.metric || prepared.objective}`);
+        return prepared;
+      });
+      return {
+        process: data.process || "Planeación Estratégica",
+        selectedMonth: normalizeMonth(data.selectedMonth) || "MAYO",
+        currentYear: Number(data.currentYear) || 2026,
+        previousYear: Number(data.previousYear) || (Number(data.currentYear) || 2026) - 1,
+        sourceFile: data.sourceFile || "RH2026.xlsx",
+        rows
+      };
+    }
+
+    function render() {
+      syncMonthSelect();
+      renderHeader();
+      renderSummary();
+      renderCards();
+      renderGlobalMatrix();
+      renderDetail();
+    }
+
+    function syncMonthSelect() {
+      els.monthSelect.innerHTML = MONTHS.map((month, idx) => (
+        `<option value="${month}" ${month === state.selectedMonth ? "selected" : ""}>${MONTH_LABELS[idx]}</option>`
+      )).join("");
+    }
+
+    function renderHeader() {
+      const monthLabel = monthLabelFromKey(state.selectedMonth);
+      els.periodLabel.textContent = `${monthLabel} ${state.data.currentYear} - ${presentationArea()}`;
+      els.fileName.textContent = state.data.sourceFile || "Excel sin nombre";
+      els.fileMeta.textContent = `${state.data.rows.length} KPIs detectados. Comparativo ${state.data.previousYear} vs ${state.data.currentYear} vs presupuesto.`;
+    }
+
+    function renderSummary() {
+      const rows = state.data.rows;
+      const weighted = sum(rows.map(row => {
+        const compliance = periodCompliance(row);
+        const weight = normalizeRatioNumber(row.weight);
+        if (weight == null || compliance == null) return normalizeRatioNumber(row.weightedScore);
+        return weight * compliance;
+      }));
+      const avg = average(rows.map(periodCompliance));
+      const risks = rows.filter(row => {
+        const compliance = periodCompliance(row);
+        return compliance != null && compliance < 1;
+      }).length;
+      const weightTotal = sum(rows.map(row => normalizeRatioNumber(row.weight)));
+
+      els.scoreValue.textContent = formatPercent(weighted, 1);
+      els.scoreMeta.textContent = weightTotal ? `Peso capturado: ${formatPercent(weightTotal, 0)}` : "Suma de indicadores ponderados.";
+      els.avgValue.textContent = formatPercent(avg, 1);
+      els.avgMeta.textContent = `${monthLabelFromKey(state.selectedMonth)} seleccionado.`;
+      els.countValue.textContent = String(rows.length);
+      els.countMeta.textContent = `Fuente: ${state.data.sourceFile || "archivo cargado"}`;
+      els.riskValue.textContent = String(risks);
+      els.riskMeta.textContent = risks === 1 ? "1 KPI requiere atención." : `${risks} KPIs requieren atención.`;
+      els.globalGauge.innerHTML = gaugeSvg(weighted, "Resultado ponderado", { large: true });
+      els.globalTraffic.innerHTML = trafficHtml(rows);
+    }
+
+    function renderCards() {
+      const rows = filteredRows();
+      els.kpiListCount.textContent = `${rows.length} KPI${rows.length === 1 ? "" : "s"}`;
+      if (!rows.length) {
+        els.kpiCards.innerHTML = `<div class="empty-state">No hay KPIs con ese filtro.</div>`;
+        return;
+      }
+      els.kpiCards.innerHTML = rows.map(row => {
+        const values = periodValues(row);
+        const max = maxForBars([chartNumber(values.previous, row), chartNumber(values.current, row), chartNumber(row.budget, row)]);
+        const status = statusFor(periodCompliance(row));
+        const comment = commentFor(row);
+        const nextStep = nextStepsFor(row);
+        const evidenceCount = evidenceFor(row).length;
+        const cardCapture = nextStep.action || nextStep.owner || nextStep.dueDate || comment || evidenceCount ? [
+          nextStep.action ? `Next: ${shorten(nextStep.action, 58)}` : "",
+          nextStep.owner ? `Resp.: ${shorten(nextStep.owner, 24)}` : "",
+          nextStep.dueDate ? `Fecha: ${formatDate(nextStep.dueDate)}` : "",
+          comment && !nextStep.action ? shorten(comment, 58) : "",
+          evidenceCount ? `${evidenceCount} foto${evidenceCount === 1 ? "" : "s"}` : ""
+        ].filter(Boolean).join(" · ") : "";
+        return `
+          <button class="kpi-card ${row.id === state.selectedId ? "selected" : ""}" type="button" data-id="${escapeHtml(row.id)}">
+            <div class="kpi-top">
+              <span class="kpi-id">KPI ${escapeHtml(row.id)}</span>
+              <span class="status ${status.className}">${status.label}</span>
+            </div>
+            <h3>${escapeHtml(row.metric || "Indicador sin nombre")}</h3>
+            <p>${escapeHtml(row.objective || "Objetivo sin nombre")}</p>
+            <div class="mini-bars">
+              ${miniBar("Ant.", values.previous, max, "#7796ab", row)}
+              ${miniBar("Actual", values.current, max, "#0d1c2c", row)}
+              ${miniBar("Ppto", row.budget, max, "#ee8901", row)}
+            </div>
+            <div class="card-signal">
+              ${miniGaugeSvg(periodCompliance(row))}
+              <div class="signal-copy">${escapeHtml(status.label)} · ${escapeHtml(formatPercent(periodCompliance(row), 1))}</div>
+            </div>
+            ${cardCapture ? `<p class="card-followup" title="${escapeHtml(cardCapture)}">${escapeHtml(shorten(cardCapture, 92))}</p>` : ""}
+          </button>
+        `;
+      }).join("");
+
+      els.kpiCards.querySelectorAll(".kpi-card").forEach(card => {
+        card.addEventListener("click", () => {
+          state.selectedId = card.dataset.id;
+          renderCards();
+          renderDetail();
+        });
+      });
+    }
+
+    function renderDetail() {
+      const row = getSelectedRow();
+      if (!row) {
+        els.detailTitle.textContent = "Sin KPIs";
+        els.detailSubtitle.textContent = "Carga un Excel con la hoja KPIS.";
+        els.detailScore.textContent = "s/d";
+        els.kpiMetaGrid.innerHTML = "";
+        els.comparisonGrid.innerHTML = "";
+        els.kpiGauge.innerHTML = "";
+        els.kpiTraffic.innerHTML = "";
+        els.monthlyChart.innerHTML = `<div class="empty-state">No hay datos para graficar.</div>`;
+        els.captureTitle.textContent = "Sin indicador seleccionado";
+        els.captureStatus.className = "status empty";
+        els.captureStatus.textContent = "Sin dato";
+        els.nextStepAction.value = "";
+        els.nextStepOwner.value = "";
+        els.nextStepDate.value = "";
+        els.kpiNotes.value = "";
+        renderEvidence(null);
+        return;
+      }
+      const values = periodValues(row);
+      const compliance = periodCompliance(row);
+      const status = statusFor(compliance);
+      const max = maxForBars([chartNumber(values.previous, row), chartNumber(values.current, row), chartNumber(row.budget, row)]);
+      const nextStep = nextStepsFor(row);
+
+      els.detailTitle.textContent = row.metric || "Indicador sin nombre";
+      els.detailSubtitle.textContent = row.objective || "Objetivo sin nombre";
+      els.detailScore.textContent = formatPercent(compliance, 1);
+      els.kpiMetaGrid.innerHTML = kpiMetaHtml(row);
+      els.kpiGaugeTitle.textContent = status.label;
+      els.kpiGauge.innerHTML = gaugeSvg(compliance, "Cumplimiento KPI", { large: false });
+      els.kpiTraffic.innerHTML = trafficHtml([row]);
+      els.captureTitle.textContent = `KPI ${row.id} - ${shorten(row.metric || row.objective || "Indicador", 56)}`;
+      els.captureStatus.className = `status ${status.className}`;
+      els.captureStatus.textContent = status.label;
+      els.nextStepAction.value = nextStep.action || "";
+      els.nextStepOwner.value = nextStep.owner || "";
+      els.nextStepDate.value = nextStep.dueDate || "";
+      els.kpiNotes.value = commentFor(row);
+      renderEvidence(row);
+      els.comparisonGrid.innerHTML = [
+        metricTile(`Año anterior ${state.data.previousYear}`, values.previous, max, "#7796ab", row),
+        metricTile(`Año actual ${state.data.currentYear}`, values.current, max, "#0d1c2c", row),
+        metricTile("Presupuesto", row.budget, max, "#ee8901", row)
+      ].join("");
+      els.monthlyChart.innerHTML = monthlySvg(row);
+    }
+
+    function renderGlobalMatrix() {
+      const rows = state.data.rows;
+      if (!rows.length) {
+        els.globalMatrix.innerHTML = `<tr><td colspan="10">No hay KPIs cargados.</td></tr>`;
+        return;
+      }
+      els.globalMatrix.innerHTML = rows.map(row => {
+        const compliance = periodCompliance(row);
+        const status = statusFor(compliance);
+        const values = globalMatrixValues(row);
+        return `
+          <tr>
+            <td>${escapeHtml(values.objective)}</td>
+            <td>${escapeHtml(values.metric)}</td>
+            <td>${escapeHtml(values.unit)}</td>
+            <td>${escapeHtml(values.source)}</td>
+            <td class="numeric">${escapeHtml(values.accumulated)}</td>
+            <td class="numeric">${escapeHtml(values.budget)}</td>
+            <td class="numeric">${escapeHtml(values.current)}</td>
+            <td class="numeric ${status.className}-text">${escapeHtml(values.compliance)}</td>
+            <td class="numeric">${escapeHtml(values.weight)}</td>
+            <td class="numeric">${escapeHtml(values.weighted)}</td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function renderEvidence(row) {
+      const items = row ? evidenceFor(row) : [];
+      els.evidenceCount.textContent = `${items.length} foto${items.length === 1 ? "" : "s"}`;
+      if (!items.length) {
+        els.evidenceGallery.innerHTML = `<div class="evidence-empty">Carga fotos de soporte, avances o evidencia visual del indicador.</div>`;
+        return;
+      }
+      els.evidenceGallery.innerHTML = items.map(item => `
+        <figure class="evidence-item">
+          <img src="${escapeHtml(item.dataUrl)}" alt="${escapeHtml(item.name || "Evidencia del KPI")}">
+          <footer>
+            <span title="${escapeHtml(item.name || "")}">${escapeHtml(shorten(item.name || "Foto", 24))}</span>
+            <button class="evidence-remove" type="button" data-remove-evidence="${escapeHtml(item.id)}" title="Quitar foto">×</button>
+          </footer>
+        </figure>
+      `).join("");
+    }
+
+    function miniBar(label, value, max, color, row) {
+      const chartValue = chartNumber(value, row);
+      const width = chartValue == null ? 0 : Math.max(2, Math.min(100, Math.abs(chartValue) / max * 100));
+      return `
+        <div class="mini-row">
+          <span>${label}</span>
+          <div class="track"><div class="fill" style="width:${width}%;background:${color}"></div></div>
+          <strong>${formatValue(value, row)}</strong>
+        </div>
+      `;
+    }
+
+    function metricTile(label, value, max, color, row) {
+      const chartValue = chartNumber(value, row);
+      const width = chartValue == null ? 0 : Math.max(2, Math.min(100, Math.abs(chartValue) / max * 100));
+      return `
+        <div class="metric-tile">
+          <span>${escapeHtml(label)}</span>
+          <strong>${formatValue(value, row)}</strong>
+          <div class="track"><div class="fill" style="width:${width}%;background:${color}"></div></div>
+        </div>
+      `;
+    }
+
+    function kpiMetaItems(row) {
+      const values = periodValues(row);
+      const compliance = periodCompliance(row);
+      const weight = normalizeRatioNumber(row.weight);
+      const weighted = firstNumber(normalizeRatioNumber(row.weightedScore), weight != null && compliance != null ? weight * compliance : null);
+      return [
+        {
+          label: "Indicador / medición",
+          value: row.metric || "Indicador sin nombre",
+          note: `${row.unit || "s/u"} · ${shorten(row.objective || "", 92)}`,
+          primary: true
+        },
+        { label: "Acumulado", value: formatValue(firstNumber(row.currentAccumulated, values.current), row) },
+        { label: "Mínimo", value: formatValue(row.budget, row) },
+        { label: "Real", value: formatValue(values.current, row) },
+        { label: "Cumplimiento", value: formatPercent(compliance, 1) },
+        { label: "Peso", value: formatPercent(row.weight, 0) },
+        { label: "Real indicador", value: formatPercent(weighted, 1) }
+      ];
+    }
+
+    function kpiMetaHtml(row) {
+      return kpiMetaItems(row).map(item => `
+        <div class="kpi-meta-item ${item.primary ? "primary" : ""}">
+          <span>${escapeHtml(item.label)}</span>
+          <strong>${escapeHtml(item.value)}</strong>
+          ${item.note ? `<em>${escapeHtml(item.note)}</em>` : ""}
+        </div>
+      `).join("");
+    }
+
+    function trafficHtml(rows) {
+      const stats = trafficStats(rows);
+      const items = [
+        { key: "good", label: "En meta", color: `#${BRAND.green}`, count: stats.good },
+        { key: "watch", label: "Atención", color: `#${BRAND.yellow}`, count: stats.watch },
+        { key: "risk", label: "Riesgo", color: `#${BRAND.red}`, count: stats.risk },
+        { key: "empty", label: "Sin dato", color: "#8B9CB8", count: stats.empty }
+      ];
+      return `
+        <div class="traffic-list">
+          ${items.map(item => `
+            <div class="traffic-item">
+              <i class="traffic-dot" style="background:${item.color}"></i>
+              <span>${item.label}</span>
+              <strong class="traffic-count">${item.count}</strong>
+            </div>
+          `).join("")}
+        </div>
+      `;
+    }
+
+    function trafficStats(rows) {
+      return (rows || []).reduce((acc, row) => {
+        const status = statusFor(periodCompliance(row));
+        if (status.className === "good") acc.good += 1;
+        else if (status.className === "watch") acc.watch += 1;
+        else if (status.className === "risk") acc.risk += 1;
+        else acc.empty += 1;
+        return acc;
+      }, { good: 0, watch: 0, risk: 0, empty: 0 });
+    }
+
+    function gaugeSvg(value, label, opts = {}) {
+      const num = toNumber(value);
+      const ratio = num == null ? 0 : Math.max(0, Math.min(1.25, num));
+      const percent = Math.min(1, ratio / 1.2);
+      const angle = -140 + percent * 280;
+      const status = statusFor(num);
+      const width = opts.large ? 360 : 300;
+      const height = opts.large ? 205 : 170;
+      const cx = width / 2;
+      const cy = opts.large ? 156 : 128;
+      const r = opts.large ? 126 : 104;
+      const needle = polar(cx, cy, r - 28, angle);
+      const base = polar(cx, cy, 11, angle + 180);
+      const segments = [
+        { start: -140, end: -35, color: BRAND.red },
+        { start: -35, end: 35, color: BRAND.yellow },
+        { start: 35, end: 140, color: BRAND.green }
+      ];
+      return `
+        <svg class="gauge" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(label)} ${escapeHtml(formatPercent(num, 1))}">
+          <g fill="none" stroke-linecap="round">
+            ${segments.map(seg => `<path d="${arcPath(cx, cy, r, seg.start, seg.end)}" stroke="#${seg.color}" stroke-width="${opts.large ? 18 : 15}"></path>`).join("")}
+            <path d="${arcPath(cx, cy, r - 24, -140, 140)}" stroke="#D9E2EE" stroke-width="2"></path>
+          </g>
+          <line x1="${base.x}" y1="${base.y}" x2="${needle.x}" y2="${needle.y}" stroke="#${BRAND.navy}" stroke-width="${opts.large ? 7 : 6}" stroke-linecap="round"></line>
+          <circle cx="${cx}" cy="${cy}" r="${opts.large ? 13 : 11}" fill="#${BRAND.navy}"></circle>
+          <text x="${cx}" y="${opts.large ? 58 : 48}" text-anchor="middle" font-size="${opts.large ? 34 : 28}" font-weight="800" fill="#${BRAND.navy}">${escapeHtml(formatPercent(num, 1))}</text>
+          <text x="${cx}" y="${opts.large ? 84 : 70}" text-anchor="middle" font-size="12" font-weight="800" fill="#${status.color}">${escapeHtml(status.label.toUpperCase())}</text>
+          <text x="${cx}" y="${height - 8}" text-anchor="middle" font-size="10" font-weight="800" fill="#64748B">0% · 80% · 100% · 120%</text>
+        </svg>
+      `;
+    }
+
+    function miniGaugeSvg(value) {
+      const num = toNumber(value);
+      const ratio = num == null ? 0 : Math.max(0, Math.min(1.2, num));
+      const angle = -135 + (ratio / 1.2) * 270;
+      const needle = polar(21, 27, 16, angle);
+      const status = statusFor(num);
+      return `
+        <svg class="mini-gauge" viewBox="0 0 42 30" aria-hidden="true">
+          <path d="${arcPath(21, 27, 20, -135, -35)}" fill="none" stroke="#${BRAND.red}" stroke-width="4" stroke-linecap="round"></path>
+          <path d="${arcPath(21, 27, 20, -35, 35)}" fill="none" stroke="#${BRAND.yellow}" stroke-width="4" stroke-linecap="round"></path>
+          <path d="${arcPath(21, 27, 20, 35, 135)}" fill="none" stroke="#${BRAND.green}" stroke-width="4" stroke-linecap="round"></path>
+          <line x1="21" y1="27" x2="${needle.x}" y2="${needle.y}" stroke="#${BRAND.navy}" stroke-width="2.5" stroke-linecap="round"></line>
+          <circle cx="21" cy="27" r="3" fill="#${status.color}"></circle>
+        </svg>
+      `;
+    }
+
+    function polar(cx, cy, r, angle) {
+      const rad = (angle - 90) * Math.PI / 180;
+      return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+    }
+
+    function arcPath(cx, cy, r, startAngle, endAngle) {
+      const start = polar(cx, cy, r, endAngle);
+      const end = polar(cx, cy, r, startAngle);
+      const largeArc = endAngle - startAngle <= 180 ? 0 : 1;
+      return `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} A ${r} ${r} 0 ${largeArc} 0 ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
+    }
+
+    function monthlySvg(row) {
+      const width = 760;
+      const height = 312;
+      const left = 42;
+      const right = 18;
+      const top = 58;
+      const bottom = 42;
+      const innerW = width - left - right;
+      const innerH = height - top - bottom;
+      const selectedMonth = normalizeMonth(state.selectedMonth);
+      const selectedIdx = Math.max(0, MONTHS.indexOf(selectedMonth));
+      const points = MONTH_LABELS.map((label, idx) => {
+        const seriesPoint = row.series[idx] || {};
+        return {
+          label: label.slice(0, 3),
+          fullLabel: label,
+          previous: toNumber(seriesPoint.previous),
+          current: toNumber(seriesPoint.current),
+          budget: toNumber(row.budget)
+        };
+      });
+      const max = maxForBars(points.flatMap(point => [chartNumber(point.previous, row), chartNumber(point.current, row), chartNumber(point.budget, row)]));
+      const groupW = innerW / points.length;
+      const barW = Math.max(5, Math.min(14, groupW / 5));
+      const y = value => {
+        const chartValue = chartNumber(value, row);
+        return top + innerH - ((chartValue == null ? 0 : Math.abs(chartValue)) / max * innerH);
+      };
+      const h = value => {
+        const chartValue = chartNumber(value, row);
+        return chartValue == null ? 0 : Math.max(1, Math.abs(chartValue) / max * innerH);
+      };
+      const rects = points.map((point, idx) => {
+        const x0 = left + idx * groupW + groupW / 2 - barW * 1.7;
+        const bars = [
+          { key: "previous", label: `Ant. ${state.data.previousYear}`, value: point.previous, x: x0, color: `#${BRAND.slate}` },
+          { key: "current", label: `Actual ${state.data.currentYear}`, value: point.current, x: x0 + barW + 3, color: `#${BRAND.navy}` },
+          { key: "budget", label: "Ppto", value: point.budget, x: x0 + (barW + 3) * 2, color: `#${BRAND.orange}` }
+        ];
+        const labels = bars.filter(bar => (
+          bar.value != null && bar.key === "current" && (idx === selectedIdx || idx % 2 === 0)
+        )).map(bar => {
+          const labelY = Math.max(top + 8, y(bar.value) - 7);
+          return `<text class="bar-value" x="${bar.x + barW / 2}" y="${labelY}" text-anchor="middle" style="fill:${bar.color}">${escapeHtml(formatCompactValue(bar.value, row))}</text>`;
+        }).join("");
+        const selectedBand = idx === selectedIdx ? `<rect x="${left + idx * groupW + 2}" y="${top - 10}" width="${groupW - 4}" height="${innerH + 16}" fill="#fff8ef" stroke="#${BRAND.orange}" stroke-width="1" rx="6" opacity="0.86"></rect>` : "";
+        return `
+          ${selectedBand}
+          ${bars.map(bar => `<rect x="${bar.x}" y="${y(bar.value)}" width="${barW}" height="${h(bar.value)}" fill="${bar.color}" rx="2"><title>${escapeHtml(`${bar.label} ${point.fullLabel}: ${formatValue(bar.value, row)}`)}</title></rect>`).join("")}
+          ${labels}
+          <text x="${left + idx * groupW + groupW / 2}" y="${height - 16}" text-anchor="middle">${point.label}</text>
+        `;
+      }).join("");
+      const selectedPoint = points[selectedIdx] || points[0] || {};
+      const chips = [
+        { label: `Ant. ${formatCompactValue(selectedPoint.previous, row)}`, color: `#${BRAND.slate}` },
+        { label: `Actual ${formatCompactValue(selectedPoint.current, row)}`, color: `#${BRAND.navy}` },
+        { label: `Ppto ${formatCompactValue(selectedPoint.budget, row)}`, color: `#${BRAND.orange}` }
+      ];
+      const chipW = 126;
+      const chipGap = 10;
+      const chipX = left + 142;
+      const chipY = 10;
+      const selectedSummary = `
+        <text x="${left}" y="25" text-anchor="start" style="fill:#${BRAND.navy};font-size:10px;font-weight:900">${escapeHtml(selectedPoint.fullLabel || "")}</text>
+        ${chips.map((chip, idx) => {
+          const x = chipX + idx * (chipW + chipGap);
+          return `
+            <rect x="${x}" y="${chipY}" width="${chipW}" height="24" fill="#ffffff" stroke="${chip.color}" stroke-width="1.2" rx="7"></rect>
+            <rect x="${x + 7}" y="${chipY + 7}" width="10" height="10" fill="${chip.color}" rx="2"></rect>
+            <text x="${x + 23}" y="${chipY + 16}" text-anchor="start" style="fill:${chip.color};font-size:8.8px;font-weight:900">${escapeHtml(chip.label)}</text>
+          `;
+        }).join("")}
+      `;
+      const grid = [0, 0.25, 0.5, 0.75, 1].map(tick => {
+        const yy = top + innerH - tick * innerH;
+        const label = formatAxis(max * tick, row);
+        return `
+          <line x1="${left}" x2="${width - right}" y1="${yy}" y2="${yy}" stroke="#d9e2ee" stroke-width="1"></line>
+          <text x="${left - 8}" y="${yy + 4}" text-anchor="end">${label}</text>
+        `;
+      }).join("");
+      return `
+        <svg class="chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="Serie mensual del KPI">
+          ${selectedSummary}
+          ${grid}
+          <line x1="${left}" x2="${width - right}" y1="${top + innerH}" y2="${top + innerH}" stroke="#9db4c7" stroke-width="1.4"></line>
+          ${rects}
+        </svg>
+      `;
+    }
+
+    function filteredRows() {
+      const query = normalize(state.search);
+      if (!query) return state.data.rows;
+      return state.data.rows.filter(row => {
+        const nextStep = nextStepsFor(row);
+        const evidenceNames = evidenceFor(row).map(item => item.name).join(" ");
+        return normalize(`${row.id} ${row.metric} ${row.objective} ${commentFor(row)} ${nextStep.action || ""} ${nextStep.owner || ""} ${evidenceNames}`).includes(query);
+      });
+    }
+
+    function getSelectedRow() {
+      return state.data.rows.find(row => row.id === state.selectedId) || state.data.rows[0] || null;
+    }
+
+    function periodValues(row) {
+      const month = normalizeMonth(state.selectedMonth);
+      return {
+        current: firstNumber(valueForMonth(row.series, month, "current"), row.current),
+        previous: firstNumber(valueForMonth(row.series, month, "previous"), row.previous)
+      };
+    }
+
+    function periodCompliance(row) {
+      const values = periodValues(row);
+      return firstNumber(normalizeRatioNumber(row.compliance), computeCompliance(values.current, row.budget, row.metric));
+    }
+
+    function valueForMonth(series, month, key) {
+      const point = (series || []).find(item => normalizeMonth(item.month) === month);
+      return toNumber(point?.[key]);
+    }
+
+    function computeCompliance(current, budget, metric) {
+      const cur = toNumber(current);
+      const bgt = toNumber(budget);
+      if (cur == null || bgt == null || bgt === 0) return null;
+      const lowerIsBetter = normalize(metric).includes("ROTACION") || normalize(metric).includes("BAJA");
+      if (lowerIsBetter) return cur === 0 ? null : bgt / cur;
+      return cur / bgt;
+    }
+
+    function statusFor(compliance) {
+      if (compliance == null) return { label: "Sin dato", className: "empty", color: "8B9CB8" };
+      if (compliance >= 1) return { label: "En meta", className: "good", color: BRAND.green };
+      if (compliance >= 0.8) return { label: "Atención", className: "watch", color: BRAND.yellow };
+      return { label: "Riesgo", className: "risk", color: BRAND.red };
+    }
+
+    function commentFor(row) {
+      return state.comments[row.key] ?? row.sourceComment ?? "";
+    }
+
+    function objectiveLabel(row) {
+      const value = clean(row?.objective || "");
+      const beforeColon = clean(value.split(":")[0]);
+      return shorten(beforeColon.length >= 5 ? beforeColon : value, 52);
+    }
+
+    function globalMatrixValues(row) {
+      const values = periodValues(row);
+      const compliance = periodCompliance(row);
+      const weight = normalizeRatioNumber(row.weight);
+      const weighted = firstNumber(normalizeRatioNumber(row.weightedScore), weight != null && compliance != null ? weight * compliance : null);
+      return {
+        objective: objectiveLabel(row),
+        metric: shorten(row.metric || "", 58),
+        unit: row.unit || "s/u",
+        source: shorten(row.sourceComment || "Fuente RH", 58),
+        accumulated: formatValue(firstNumber(row.currentAccumulated, values.current), row),
+        budget: formatValue(row.budget, row),
+        current: formatValue(values.current, row),
+        compliance: formatPercent(compliance, 0),
+        weight: formatPercent(row.weight, 0),
+        weighted: formatPercent(weighted, 0)
+      };
+    }
+
+    function presentationArea() {
+      return clean(state.area || els.areaInput?.value || state.data.process || "Planeación Estratégica");
+    }
+
+    function nextStepsFor(row) {
+      return state.nextSteps[row.key] || {};
+    }
+
+    function evidenceFor(row) {
+      const items = state.evidence[row.key];
+      return Array.isArray(items) ? items : [];
+    }
+
+    function followUpSummary(row) {
+      const nextStep = nextStepsFor(row);
+      const evidenceCount = evidenceFor(row).length;
+      return [
+        nextStep.action ? `Acción: ${nextStep.action}` : "",
+        nextStep.owner ? `Resp.: ${nextStep.owner}` : "",
+        nextStep.dueDate ? `Fecha: ${formatDate(nextStep.dueDate)}` : "",
+        commentFor(row),
+        evidenceCount ? `${evidenceCount} foto${evidenceCount === 1 ? "" : "s"}` : ""
+      ].filter(Boolean).join(" | ");
+    }
+
+    function sheetRows(workbook, sheetName) {
+      return XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, raw: true, defval: null });
+    }
+
+    function findSheetName(workbook, candidates) {
+      const normalized = candidates.map(normalize);
+      return workbook.SheetNames.find(name => normalized.includes(normalize(name)));
+    }
+
+    function isAuxiliarySheetName(name) {
+      const normalized = normalize(name);
+      return ["MES", "MESES", "CAMBIAR MES", "CAMBIO MES"].includes(normalized);
+    }
+
+    function isKpiDataRow(row) {
+      const id = normalize(row?.id);
+      const objective = normalize(row?.objective);
+      const metric = normalize(row?.metric);
+      const auxiliaryValues = ["MES", "MESES", "CAMBIAR MES", "CAMBIO MES"];
+      if (!objective && !metric) return false;
+      if (auxiliaryValues.includes(id) || auxiliaryValues.includes(objective) || auxiliaryValues.includes(metric)) return false;
+      if (objective.includes("NOMBRE DEL OBJETIVO") || metric.includes("NOMBRE DEL INDICADOR")) return false;
+      return true;
+    }
+
+    function findHeaderRow(rows, required) {
+      const requiredNorm = required.map(normalize);
+      return rows.findIndex(row => {
+        const rowText = (row || []).map(normalize).join(" | ");
+        return requiredNorm.every(item => rowText.includes(item));
+      });
+    }
+
+    function findCol(headers, options) {
+      const normalizedHeaders = headers.map(normalize);
+      for (const option of options) {
+        const needle = normalize(option);
+        const exact = normalizedHeaders.findIndex(header => header === needle);
+        if (exact >= 0) return exact;
+        const partial = normalizedHeaders.findIndex(header => header.includes(needle));
+        if (partial >= 0) return partial;
+      }
+      return null;
+    }
+
+    function monthColumnMap(headers) {
+      const map = {};
+      headers.forEach((header, idx) => {
+        const month = normalizeMonth(header);
+        if (month && map[month] == null) map[month] = idx;
+      });
+      return map;
+    }
+
+    function latestMonthWithData(rows) {
+      for (let idx = MONTHS.length - 1; idx >= 0; idx -= 1) {
+        const month = MONTHS[idx];
+        if (rows.some(row => valueForMonth(row.series, month, "current") != null)) return month;
+      }
+      return null;
+    }
+
+    function normalizeMonth(value) {
+      const text = normalize(value);
+      return MONTHS.find(month => text === month || text.includes(month)) || null;
+    }
+
+    function monthLabelFromKey(key) {
+      const idx = MONTHS.indexOf(normalizeMonth(key));
+      return idx >= 0 ? MONTH_LABELS[idx] : clean(key || "");
+    }
+
+    function clean(value) {
+      if (value == null) return "";
+      return String(value).replace(/\s+/g, " ").trim();
+    }
+
+    function normalize(value) {
+      return clean(value)
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toUpperCase()
+        .replace(/[´'`]/g, "")
+        .trim();
+    }
+
+    function kpiKey(value) {
+      return normalize(value).replace(/[^A-Z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 120);
+    }
+
+    function toNumber(value) {
+      if (value == null || value === "") return null;
+      if (typeof value === "number") return Number.isFinite(value) ? value : null;
+      if (value instanceof Date) return null;
+      const raw = clean(value);
+      if (!raw || raw.startsWith("#")) return null;
+      const hasPercent = raw.includes("%");
+      const parsed = Number(raw.replace("%", "").replace(",", "."));
+      if (!Number.isFinite(parsed)) return null;
+      return hasPercent ? parsed / 100 : parsed;
+    }
+
+    function firstNumber(...values) {
+      for (const value of values) {
+        const number = toNumber(value);
+        if (number != null) return number;
+      }
+      return null;
+    }
+
+    function sum(values) {
+      const valid = values.map(toNumber).filter(value => value != null);
+      return valid.reduce((acc, value) => acc + value, 0);
+    }
+
+    function average(values) {
+      const valid = values.map(toNumber).filter(value => value != null);
+      if (!valid.length) return null;
+      return valid.reduce((acc, value) => acc + value, 0) / valid.length;
+    }
+
+    function maxForBars(values) {
+      const valid = values.map(toNumber).filter(value => value != null).map(Math.abs);
+      return Math.max(1, ...valid);
+    }
+
+    function isPercentRow(row) {
+      const unit = normalize(row?.unit || "");
+      return unit.includes("%") || unit.includes("PORCENTAJE");
+    }
+
+    function isCurrencyOrLargeUnit(row) {
+      const unit = normalize(row?.unit || "");
+      return unit.includes("$") || unit.includes("MXN") || unit.includes("PESO") || unit.includes("IMPORTE");
+    }
+
+    function chartNumber(value, row) {
+      if (isPercentRow(row)) return normalizePercentNumber(value);
+      return toNumber(value);
+    }
+
+    function normalizePercentNumber(value) {
+      const num = toNumber(value);
+      if (num == null) return null;
+      return Math.abs(num) > 1.5 ? num / 100 : num;
+    }
+
+    function normalizeRatioNumber(value) {
+      const num = toNumber(value);
+      if (num == null) return null;
+      return Math.abs(num) > 3 ? num / 100 : num;
+    }
+
+    function formatValue(value, row) {
+      const num = toNumber(value);
+      if (num == null) return "s/d";
+      if (isPercentRow(row)) {
+        const percent = normalizePercentNumber(num);
+        return formatPercent(percent, Math.abs(percent) < 0.1 ? 1 : 0);
+      }
+      if (isCurrencyOrLargeUnit(row) || Math.abs(num) >= 1000) return formatThousands(num, row);
+      return new Intl.NumberFormat("es-MX", { maximumFractionDigits: 2 }).format(num);
+    }
+
+    function formatThousands(value, row) {
+      const num = toNumber(value);
+      if (num == null) return "s/d";
+      const prefix = isCurrencyOrLargeUnit(row) ? "$" : "";
+      const formatted = new Intl.NumberFormat("es-MX", {
+        maximumFractionDigits: Math.abs(num) >= 100000 ? 0 : 1,
+        minimumFractionDigits: Math.abs(num) >= 100000 ? 0 : 1
+      }).format(num / 1000);
+      return `${prefix}${formatted} mil`;
+    }
+
+    function formatCompactValue(value, row) {
+      const num = toNumber(value);
+      if (num == null) return "";
+      if (isPercentRow(row)) return formatPercent(normalizePercentNumber(num), 0);
+      if (isCurrencyOrLargeUnit(row) || Math.abs(num) >= 1000) return formatThousands(num, row).replace(" mil", "k");
+      return new Intl.NumberFormat("es-MX", { maximumFractionDigits: 1 }).format(num);
+    }
+
+    function formatPercent(value, digits = 0) {
+      const num = normalizeRatioNumber(value);
+      if (num == null) return "s/d";
+      return new Intl.NumberFormat("es-MX", {
+        style: "percent",
+        maximumFractionDigits: digits,
+        minimumFractionDigits: digits
+      }).format(num);
+    }
+
+    function formatAxis(value, row) {
+      const num = toNumber(value);
+      if (num == null) return "";
+      if (isPercentRow(row)) return formatPercent(normalizePercentNumber(num), 0);
+      if (isCurrencyOrLargeUnit(row) || Math.abs(num) >= 1000) return formatThousands(num, row).replace(" mil", "k");
+      return new Intl.NumberFormat("es-MX", { maximumFractionDigits: 0 }).format(num);
+    }
+
+    function formatDate(value) {
+      if (!value) return "";
+      const [year, month, day] = String(value).split("-");
+      if (!year || !month || !day) return clean(value);
+      return `${day}/${month}/${year}`;
+    }
+
+    function shorten(text, length) {
+      const value = clean(text);
+      return value.length > length ? `${value.slice(0, length - 1)}...` : value;
+    }
+
+    function escapeHtml(value) {
+      return clean(value).replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "\"": "&quot;",
+        "'": "&#39;"
+      }[char]));
+    }
+
+    function loadJson(key, fallback) {
+      try {
+        return JSON.parse(localStorage.getItem(key) || "") || fallback;
+      } catch {
+        return fallback;
+      }
+    }
+
+    function saveJson(key, value) {
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+        return true;
+      } catch (error) {
+        console.warn("No se pudo guardar en localStorage", error);
+        showToast("No se pudo guardar: reduce la cantidad de fotos.");
+        return false;
+      }
+    }
+
+    function readFileAsDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error || new Error("No se pudo leer el archivo."));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function fileToEvidence(file) {
+      const originalData = await readFileAsDataUrl(file);
+      return new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => {
+          const maxSide = 900;
+          const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
+          const width = Math.max(1, Math.round(image.width * scale));
+          const height = Math.max(1, Math.round(image.height * scale));
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const context = canvas.getContext("2d");
+          context.fillStyle = "#ffffff";
+          context.fillRect(0, 0, width, height);
+          context.drawImage(image, 0, 0, width, height);
+          resolve({
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            name: shorten(file.name || "foto", 80),
+            dataUrl: canvas.toDataURL("image/jpeg", 0.74),
+            width,
+            height,
+            createdAt: new Date().toISOString()
+          });
+        };
+        image.onerror = () => reject(new Error("No se pudo procesar la imagen."));
+        image.src = originalData;
+      });
+    }
+
+    function containImageBox(item, x, y, w, h) {
+      const width = Number(item.width) || 4;
+      const height = Number(item.height) || 3;
+      const scale = Math.min(w / width, h / height);
+      const finalW = width * scale;
+      const finalH = height * scale;
+      return {
+        x: x + (w - finalW) / 2,
+        y: y + (h - finalH) / 2,
+        w: finalW,
+        h: finalH
+      };
+    }
+
+    function nextStepTextFor(row) {
+      const nextStep = nextStepsFor(row);
+      const comment = commentFor(row);
+      const evidenceCount = evidenceFor(row).length;
+      const lines = [
+        nextStep.action ? `Acción: ${nextStep.action}` : "",
+        nextStep.owner ? `Responsable: ${nextStep.owner}` : "",
+        nextStep.dueDate ? `Fecha compromiso: ${formatDate(nextStep.dueDate)}` : "",
+        comment ? `Contexto: ${comment}` : "",
+        evidenceCount ? `Evidencias cargadas: ${evidenceCount} foto${evidenceCount === 1 ? "" : "s"}` : ""
+      ].filter(Boolean);
+      return lines.length ? lines.join("\n") : "Sin next steps capturados para este KPI.";
+    }
+
+    async function exportPresentation() {
+      try {
+        const PptxGen = window.pptxgen || window.PptxGenJS;
+        if (!PptxGen) throw new Error("No se encontró el generador de PowerPoint.");
+        els.pptBtn.disabled = true;
+        els.pptBtn.textContent = "Generando...";
+
+        const pptx = new PptxGen();
+        pptx.layout = "LAYOUT_WIDE";
+        pptx.author = "Codex";
+        pptx.company = "Porta";
+        pptx.subject = "Seguimiento KPIs";
+        pptx.title = `Seguimiento ${presentationArea()} ${monthLabelFromKey(state.selectedMonth)} ${state.data.currentYear}`;
+        pptx.lang = "es-MX";
+        pptx.theme = {
+          headFontFace: "Montserrat",
+          bodyFontFace: "Montserrat",
+          lang: "es-MX"
+        };
+
+        addCoverSlide(pptx);
+        addExecutiveSlide(pptx);
+        state.data.rows.forEach(row => {
+          addKpiSlide(pptx, row);
+          if (evidenceFor(row).length) addKpiEvidenceSlide(pptx, row);
+        });
+        addClosingSlide(pptx);
+
+        const fileName = `Seguimiento_KPIs_${state.data.currentYear}_${normalize(state.selectedMonth).toLowerCase()}.pptx`;
+        await pptx.writeFile({ fileName });
+        showToast("PowerPoint generado.");
+      } catch (error) {
+        console.error(error);
+        showToast(`No se pudo generar el PPT: ${error.message}`);
+      } finally {
+        els.pptBtn.disabled = false;
+        els.pptBtn.textContent = "Generar PPT";
+      }
+    }
+
+    function addCoverSlide(pptx) {
+      const slide = newPptSlide(pptx);
+      paintSlideBase(pptx, slide, "navy");
+      slide.addText("Seguimiento", {
+        x: 0.68, y: 0.78, w: 4.5, h: 0.42,
+        fontFace: "Montserrat", fontSize: 28, bold: true, color: BRAND.orange, margin: 0.02,
+        breakLine: false, fit: "shrink"
+      });
+      slide.addText(presentationArea(), {
+        x: 0.68, y: 1.17, w: 7.8, h: 0.62,
+        fontFace: "Montserrat", fontSize: 34, bold: true, color: BRAND.white, margin: 0.02,
+        breakLine: false, fit: "shrink"
+      });
+      slide.addText(`${monthLabelFromKey(state.selectedMonth)} ${state.data.currentYear} · ${presentationArea()}`, {
+        x: 0.72, y: 1.92, w: 6.8, h: 0.26,
+        fontFace: "Montserrat", fontSize: 11, bold: true, color: "C8D5E0", margin: 0.02,
+      });
+      slide.addShape(pptx.ShapeType.rect, {
+        x: 0.68, y: 2.45, w: 5.95, h: 1.18,
+        fill: { color: BRAND.white, transparency: 90 }, line: { color: BRAND.slate, transparency: 45 }, radius: 0.12
+      });
+      slide.addText("Tablero ejecutivo de KPIs", {
+        x: 0.94, y: 2.74, w: 5.42, h: 0.28,
+        fontFace: "Montserrat", fontSize: 16, bold: true, color: BRAND.white, margin: 0.02,
+        fit: "shrink"
+      });
+      slide.addText("Año anterior vs año actual vs presupuesto", {
+        x: 0.94, y: 3.07, w: 5.42, h: 0.2,
+        fontFace: "Montserrat", fontSize: 9.5, bold: true, color: "C8D5E0", margin: 0.02,
+        fit: "shrink"
+      });
+      addStrategyFocus(slide, 0.92, 4.2, 5.55, 0.95);
+      addGaugeImage(slide, weightedScore(), 8.45, 1.15, 3.45, 2.05, "Resultado ponderado");
+      slide.addShape(pptx.ShapeType.rect, {
+        x: 0, y: 6.78, w: 13.33, h: 0.18,
+        fill: { color: BRAND.orange }, line: { color: BRAND.orange }
+      });
+    }
+
+    function addExecutiveSlide(pptx) {
+      const slide = newPptSlide(pptx);
+      paintSlideBase(pptx, slide, "light");
+      addSlideHeader(slide, `Seguimiento ${presentationArea()}`, `${monthLabelFromKey(state.selectedMonth)} ${state.data.currentYear}`);
+      const metrics = summaryMetrics();
+      addMetricPill(pptx, slide, "Resultado ponderado", formatPercent(metrics.weighted, 1), 0.68, 0.98, BRAND.navy, BRAND.white);
+      addMetricPill(pptx, slide, "Cumplimiento promedio", formatPercent(metrics.average, 1), 2.88, 0.98, BRAND.white, BRAND.navy);
+      addMetricPill(pptx, slide, "KPIs cargados", String(state.data.rows.length), 5.08, 0.98, BRAND.white, BRAND.navy);
+      addMetricPill(pptx, slide, "Alertas", String(metrics.risks), 7.28, 0.98, BRAND.white, BRAND.navy);
+      addGaugeImage(slide, weightedScore(), 9.65, 0.88, 2.75, 1.52, "Resultado");
+      slide.addText("Enfoque narrativo: 75% estrategia / 25% resultados", {
+        x: 0.68, y: 1.88, w: 7.4, h: 0.2,
+        fontFace: "Montserrat", fontSize: 9.2, bold: true, color: BRAND.orange, margin: 0.02,
+        fit: "shrink"
+      });
+      slide.addText("Priorizar decisiones, riesgos, acciones y próximos pasos; usar cifras como soporte.", {
+        x: 0.68, y: 2.08, w: 8.4, h: 0.16,
+        fontFace: "Montserrat", fontSize: 7.4, bold: true, color: BRAND.muted, margin: 0.02,
+        fit: "shrink"
+      });
+      addGlobalMatrixTable(pptx, slide, 0.48, 2.32, 12.35, 3.94);
+      addCommentBox(pptx, slide, "Comentario ejecutivo", state.globalNotes || "Sin comentario ejecutivo capturado.", 0.68, 6.28, 11.95, 0.34);
+      addSlideFooter(slide, 2);
+    }
+
+    function addKpiSlide(pptx, row) {
+      const slide = newPptSlide(pptx);
+      paintSlideBase(pptx, slide, "light");
+      const status = statusFor(periodCompliance(row));
+      addSlideHeader(slide, `KPI ${row.id}`, shorten(row.metric || "Indicador", 92));
+      addKpiMetaBand(pptx, slide, row, 0.68, 0.98, 11.95, 1.18);
+      slide.addShape(pptx.ShapeType.rect, {
+        x: 0.7, y: 2.35, w: 3.1, h: 1.52,
+        fill: { color: BRAND.white }, line: { color: BRAND.line, transparency: 0 }, radius: 0.12
+      });
+      addGaugeImage(slide, periodCompliance(row), 0.93, 2.42, 2.6, 1.2, "Cumplimiento del KPI");
+      slide.addText(status.label.toUpperCase(), {
+        x: 1.2, y: 3.52, w: 2.0, h: 0.2,
+        fontFace: "Montserrat", fontSize: 10, bold: true, align: "center", color: status.color, margin: 0.02
+      });
+      addKpiCompareBars(pptx, slide, row, 4.12, 2.42, 8.48, 1.2);
+      addMonthlyBars(pptx, slide, row, 0.72, 4.15, 7.55, 1.7);
+      addNextStepBox(pptx, slide, row, 8.55, 4.15, 4.1, 1.7);
+      slide.addText(shorten(row.objective || "", 250), {
+        x: 0.74, y: 6.1, w: 11.85, h: 0.5,
+        fontFace: "Montserrat", fontSize: 9, color: BRAND.muted, valign: "mid", margin: 0.04,
+        fit: "shrink"
+      });
+      addSlideFooter(slide, `KPI ${row.id}`);
+    }
+
+    function addKpiEvidenceSlide(pptx, row) {
+      const slide = newPptSlide(pptx);
+      paintSlideBase(pptx, slide, "light");
+      const items = evidenceFor(row);
+      addSlideHeader(slide, `Evidencias KPI ${row.id}`, shorten(row.metric || "Indicador", 92));
+      slide.addText("Fotos cargadas desde la aplicación", {
+        x: 0.72, y: 0.94, w: 5.8, h: 0.22,
+        fontFace: "Montserrat", fontSize: 9, bold: true, color: BRAND.muted, margin: 0.02
+      });
+      const boxes = [
+        { x: 0.72, y: 1.28, w: 5.8, h: 2.28 },
+        { x: 6.82, y: 1.28, w: 5.8, h: 2.28 },
+        { x: 0.72, y: 3.95, w: 5.8, h: 2.28 },
+        { x: 6.82, y: 3.95, w: 5.8, h: 2.28 }
+      ];
+      items.slice(0, 4).forEach((item, idx) => {
+        const box = boxes[idx];
+        slide.addShape(pptx.ShapeType.rect, {
+          x: box.x, y: box.y, w: box.w, h: box.h,
+          fill: { color: BRAND.white }, line: { color: BRAND.line }, radius: 0.12
+        });
+        const imgBox = containImageBox(item, box.x + 0.08, box.y + 0.08, box.w - 0.16, box.h - 0.44);
+        slide.addImage({ data: item.dataUrl, ...imgBox });
+        slide.addText(shorten(item.name || `Evidencia ${idx + 1}`, 68), {
+          x: box.x + 0.12, y: box.y + box.h - 0.28, w: box.w - 0.24, h: 0.16,
+          fontFace: "Montserrat", fontSize: 7.4, bold: true, color: BRAND.muted, margin: 0.01,
+          fit: "shrink"
+        });
+      });
+      if (items.length > 4) {
+        slide.addText(`+${items.length - 4} evidencia${items.length - 4 === 1 ? "" : "s"} adicional${items.length - 4 === 1 ? "" : "es"} disponible${items.length - 4 === 1 ? "" : "s"} en la app.`, {
+          x: 0.72, y: 6.47, w: 5.2, h: 0.2,
+          fontFace: "Montserrat", fontSize: 8.5, bold: true, color: BRAND.orange, margin: 0.02
+        });
+      }
+      addSlideFooter(slide, `Evidencias KPI ${row.id}`);
+    }
+
+    function addClosingSlide(pptx) {
+      const slide = newPptSlide(pptx);
+      paintSlideBase(pptx, slide, "white");
+      slide.addText("Conclusiones y próximos pasos", {
+        x: 0.72, y: 1.1, w: 9.6, h: 0.55,
+        fontFace: "Montserrat", fontSize: 30, bold: true, color: BRAND.navy, margin: 0.02,
+        fit: "shrink"
+      });
+      slide.addText(`${monthLabelFromKey(state.selectedMonth)} ${state.data.currentYear} · ${presentationArea()}`, {
+        x: 0.74, y: 1.68, w: 5.8, h: 0.24,
+        fontFace: "Montserrat", fontSize: 10, bold: true, color: BRAND.orange, margin: 0.02
+      });
+      const copy = state.closingNotes || state.globalNotes || "Sin conclusiones capturadas.";
+      slide.addShape(pptx.ShapeType.rect, {
+        x: 0.74, y: 2.2, w: 0.08, h: 3.6,
+        fill: { color: BRAND.orange }, line: { color: BRAND.orange }
+      });
+      slide.addText(copy, {
+        x: 1.08, y: 2.18, w: 10.9, h: 3.7,
+        fontFace: "Montserrat", fontSize: 22, bold: true, color: BRAND.ink, breakLine: false,
+        fit: "shrink", margin: 0.04, valign: "top"
+      });
+      slide.addText("Seguimiento ejecutivo de indicadores", {
+        x: 0.76, y: 6.15, w: 4.8, h: 0.22,
+        fontFace: "Montserrat", fontSize: 9.5, bold: true, color: BRAND.muted, margin: 0.02
+      });
+      addEkuoraFooter(slide);
+    }
+
+    function newPptSlide(pptx) {
+      const slide = pptx.addSlide();
+      const rawAddText = slide.addText.bind(slide);
+      slide.addText = (text, options) => rawAddText(sanitizePptText(text), options);
+      return slide;
+    }
+
+    function sanitizePptText(value) {
+      if (Array.isArray(value)) {
+        return value.map(item => ({
+          ...item,
+          text: sanitizePptText(item?.text ?? "")
+        }));
+      }
+      return clean(value)
+        .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, " ")
+        .replace(/\uFFFE|\uFFFF/g, "")
+        .slice(0, 1200);
+    }
+
+    function paintSlideBase(pptx, slide, mode) {
+      slide.background = { color: mode === "navy" ? BRAND.navy : mode === "white" ? BRAND.white : "EEF4F8" };
+      if (mode === "navy") {
+        slide.addShape(pptx.ShapeType.rect, {
+          x: 0.32, y: 0.3, w: 12.68, h: 6.18,
+          fill: { color: BRAND.navy, transparency: 100 },
+          line: { color: BRAND.white, transparency: 35, width: 0.7 }
+        });
+      }
+      if (mode !== "navy") {
+        slide.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 0.72, fill: { color: BRAND.navy }, line: { color: BRAND.navy } });
+        slide.addShape(pptx.ShapeType.rect, { x: 0, y: 0.72, w: 13.33, h: 0.08, fill: { color: BRAND.orange }, line: { color: BRAND.orange } });
+        slide.addShape(pptx.ShapeType.rect, {
+          x: 0.32, y: 0.98, w: 12.68, h: 5.48,
+          fill: { color: mode === "white" ? BRAND.white : "EEF4F8", transparency: 100 },
+          line: { color: BRAND.line, transparency: 15, width: 0.65 }
+        });
+      }
+    }
+
+    function addSlideHeader(slide, title, subtitle) {
+      slide.addText(title, { x: 0.62, y: 0.18, w: 6.2, h: 0.28, fontFace: "Montserrat", fontSize: 13, bold: true, color: BRAND.white, margin: 0.02, fit: "shrink" });
+      slide.addText(subtitle, { x: 6.95, y: 0.18, w: 5.5, h: 0.28, fontFace: "Montserrat", fontSize: 12, bold: true, color: "DCE7F0", align: "right", margin: 0.02, fit: "shrink" });
+    }
+
+    function addSlideFooter(slide, marker) {
+      addEkuoraFooter(slide);
+    }
+
+    function addEkuoraFooter(slide) {
+      slide.addImage({
+        data: EKUORA_FOOTER_IMAGE,
+        x: 0,
+        y: 6.72,
+        w: 13.33,
+        h: 0.78
+      });
+    }
+
+    function addStrategyFocus(slide, x, y, w, h) {
+      slide.addText("Enfoque de la presentación", {
+        x, y: y - 0.28, w, h: 0.18,
+        fontFace: "Montserrat", fontSize: 8.8, bold: true, color: "C8D5E0", margin: 0.01,
+        fit: "shrink"
+      });
+      slide.addShape("rect", {
+        x, y, w, h,
+        fill: { color: BRAND.white, transparency: 92 },
+        line: { color: BRAND.slate, transparency: 30 },
+        radius: 0.08
+      });
+      slide.addShape("rect", {
+        x: x + 0.1, y: y + 0.25, w: (w - 0.2) * 0.75, h: 0.22,
+        fill: { color: BRAND.orange }, line: { color: BRAND.orange },
+        radius: 0.04
+      });
+      slide.addShape("rect", {
+        x: x + 0.1 + (w - 0.2) * 0.75, y: y + 0.25, w: (w - 0.2) * 0.25, h: 0.22,
+        fill: { color: BRAND.slate }, line: { color: BRAND.slate },
+        radius: 0.04
+      });
+      slide.addText("75% estrategia", {
+        x: x + 0.18, y: y + 0.55, w: w * 0.55, h: 0.18,
+        fontFace: "Montserrat", fontSize: 11, bold: true, color: BRAND.white, margin: 0.01,
+        fit: "shrink"
+      });
+      slide.addText("25% resultados", {
+        x: x + w * 0.58, y: y + 0.55, w: w * 0.34, h: 0.18,
+        fontFace: "Montserrat", fontSize: 11, bold: true, color: "C8D5E0", align: "right", margin: 0.01,
+        fit: "shrink"
+      });
+    }
+
+    function addBrandMark(slide, x, y, w, h) {
+      slide.addShape("rect", { x, y, w, h, fill: { color: BRAND.white }, line: { color: BRAND.white }, radius: 0.08 });
+      slide.addShape("rect", { x: x + 0.02, y: y + h * 0.52, w: w * 0.46, h: h * 0.42, fill: { color: BRAND.slate }, line: { color: BRAND.slate } });
+      slide.addShape("rect", { x: x + w * 0.52, y: y + h * 0.52, w: w * 0.46, h: h * 0.42, fill: { color: BRAND.orange }, line: { color: BRAND.orange } });
+    }
+
+    function addGaugeImage(slide, value, x, y, w, h, label) {
+      const num = toNumber(value);
+      const status = statusFor(num);
+      const ratio = num == null ? 0 : Math.max(0, Math.min(1.2, num)) / 1.2;
+      const barX = x + 0.18;
+      const barY = y + h * 0.58;
+      const barW = w - 0.36;
+      const barH = 0.14;
+      slide.addText(label, {
+        x, y, w, h: 0.2,
+        fontFace: "Montserrat", fontSize: 8.5, bold: true, color: BRAND.muted,
+        align: "center", margin: 0.01, fit: "shrink"
+      });
+      slide.addText(formatPercent(num, 1), {
+        x, y: y + h * 0.18, w, h: 0.45,
+        fontFace: "Montserrat", fontSize: 24, bold: true, color: status.color,
+        align: "center", margin: 0.01, fit: "shrink"
+      });
+      slide.addText(status.label.toUpperCase(), {
+        x, y: y + h * 0.43, w, h: 0.18,
+        fontFace: "Montserrat", fontSize: 8, bold: true, color: status.color,
+        align: "center", margin: 0.01, fit: "shrink"
+      });
+      slide.addShape("rect", { x: barX, y: barY, w: barW * 0.46, h: barH, fill: { color: BRAND.red }, line: { color: BRAND.red }, radius: 0.04 });
+      slide.addShape("rect", { x: barX + barW * 0.46, y: barY, w: barW * 0.22, h: barH, fill: { color: BRAND.yellow }, line: { color: BRAND.yellow } });
+      slide.addShape("rect", { x: barX + barW * 0.68, y: barY, w: barW * 0.32, h: barH, fill: { color: BRAND.green }, line: { color: BRAND.green }, radius: 0.04 });
+      const needleX = barX + barW * ratio;
+      slide.addShape("rect", {
+        x: needleX - 0.012,
+        y: barY - 0.18,
+        w: 0.024,
+        h: 0.44,
+        fill: { color: BRAND.navy },
+        line: { color: BRAND.navy }
+      });
+      slide.addShape("ellipse", { x: needleX - 0.055, y: barY - 0.24, w: 0.11, h: 0.11, fill: { color: BRAND.navy }, line: { color: BRAND.navy } });
+      slide.addText("0%     80%     100%     120%", {
+        x: barX, y: barY + 0.24, w: barW, h: 0.14,
+        fontFace: "Montserrat", fontSize: 6.2, color: BRAND.muted,
+        align: "center", margin: 0.01, fit: "shrink"
+      });
+    }
+
+    function addPptTraffic(slide, rows, x, y, w, h) {
+      const stats = trafficStats(rows);
+      const items = [
+        ["En meta", stats.good, BRAND.green],
+        ["Atención", stats.watch, BRAND.yellow],
+        ["Riesgo", stats.risk, BRAND.red],
+        ["Sin dato", stats.empty, "8B9CB8"]
+      ];
+      slide.addText("Semáforo", { x, y: y - 0.28, w, h: 0.2, fontFace: "Montserrat", fontSize: 8.5, bold: true, color: BRAND.muted, margin: 0.01 });
+      items.forEach((item, idx) => {
+        const yy = y + idx * (h / 4);
+        slide.addShape("ellipse", { x, y: yy + 0.04, w: 0.12, h: 0.12, fill: { color: item[2] }, line: { color: item[2] } });
+        slide.addText(item[0], { x: x + 0.2, y: yy, w: w - 0.72, h: 0.18, fontFace: "Montserrat", fontSize: 8, color: BRAND.ink, bold: true, margin: 0.01 });
+        slide.addText(String(item[1]), { x: x + w - 0.38, y: yy, w: 0.36, h: 0.18, fontFace: "Montserrat", fontSize: 9, color: BRAND.navy, bold: true, align: "right", margin: 0.01 });
+      });
+    }
+
+    function addMetricPill(pptx, slide, label, value, x, y, fill, textColor) {
+      slide.addShape(pptx.ShapeType.rect, { x, y, w: 2.0, h: 0.78, fill: { color: fill }, line: { color: fill }, radius: 0.12 });
+      slide.addText(label, { x: x + 0.15, y: y + 0.13, w: 1.72, h: 0.14, fontFace: "Montserrat", fontSize: 6.8, bold: true, color: textColor === BRAND.white ? "DCE7F0" : BRAND.muted, margin: 0.01, fit: "shrink" });
+      slide.addText(value, { x: x + 0.15, y: y + 0.33, w: 1.72, h: 0.32, fontFace: "Montserrat", fontSize: 18, bold: true, color: textColor, margin: 0.01, fit: "shrink" });
+    }
+
+    function addKpiMetaBand(pptx, slide, row, x, y, w, h) {
+      const items = kpiMetaItems(row);
+      slide.addShape(pptx.ShapeType.rect, {
+        x, y, w, h,
+        fill: { color: BRAND.white },
+        line: { color: BRAND.line },
+        radius: 0.12
+      });
+      slide.addShape(pptx.ShapeType.rect, {
+        x, y, w: 0.08, h,
+        fill: { color: BRAND.orange },
+        line: { color: BRAND.orange }
+      });
+      const gap = 0.07;
+      const primaryW = 3.5;
+      const cellH = h - 0.28;
+      const cellY = y + 0.14;
+      const metricW = (w - primaryW - gap * 7 - 0.2) / 6;
+      items.forEach((item, idx) => {
+        const cx = idx === 0 ? x + 0.18 : x + 0.18 + primaryW + gap + (idx - 1) * (metricW + gap);
+        const cw = idx === 0 ? primaryW : metricW;
+        slide.addShape(pptx.ShapeType.rect, {
+          x: cx, y: cellY, w: cw, h: cellH,
+          fill: { color: item.primary ? BRAND.paper : "FBFCFE" },
+          line: { color: BRAND.line },
+          radius: 0.08
+        });
+        slide.addText(item.label, {
+          x: cx + 0.08, y: cellY + 0.09, w: cw - 0.16, h: 0.13,
+          fontFace: "Montserrat", fontSize: item.primary ? 6.5 : 6.2,
+          bold: true, color: BRAND.muted, margin: 0.01, fit: "shrink"
+        });
+        slide.addText(item.primary ? shorten(item.value, 72) : item.value, {
+          x: cx + 0.08, y: cellY + 0.28, w: cw - 0.16, h: item.primary ? 0.33 : 0.28,
+          fontFace: "Montserrat", fontSize: item.primary ? 8.2 : 10.5,
+          bold: true, color: BRAND.navy, margin: 0.01, fit: "shrink",
+          valign: "mid", breakLine: false
+        });
+        if (item.note) {
+          slide.addText(shorten(item.note, 90), {
+            x: cx + 0.08, y: cellY + 0.67, w: cw - 0.16, h: 0.18,
+            fontFace: "Montserrat", fontSize: 5.8, color: BRAND.muted,
+            margin: 0.01, fit: "shrink"
+          });
+        }
+      });
+    }
+
+    function addSummaryTable(pptx, slide, x, y, w, h) {
+      const rows = state.data.rows.slice(0, 8);
+      slide.addShape(pptx.ShapeType.rect, { x, y, w, h, fill: { color: BRAND.white }, line: { color: BRAND.line }, radius: 0.12 });
+      slide.addText("Comparativo de indicadores", { x: x + 0.18, y: y + 0.16, w: w - 0.36, h: 0.22, fontFace: "Montserrat", fontSize: 10, bold: true, color: BRAND.navy, margin: 0.01 });
+      const startY = y + 0.52;
+      const rowH = (h - 0.7) / Math.max(rows.length, 1);
+      rows.forEach((row, idx) => {
+        const values = periodValues(row);
+        const yy = startY + idx * rowH;
+        const status = statusFor(periodCompliance(row));
+        slide.addShape("ellipse", { x: x + 0.18, y: yy + 0.07, w: 0.1, h: 0.1, fill: { color: status.color }, line: { color: status.color } });
+        slide.addText(shorten(row.metric || "", 62), { x: x + 0.35, y: yy, w: 4.35, h: rowH - 0.03, fontFace: "Montserrat", fontSize: 6.9, bold: true, color: BRAND.ink, margin: 0.01, fit: "shrink" });
+        slide.addText(formatValue(values.previous, row), { x: x + 4.92, y: yy, w: 0.7, h: rowH - 0.03, fontFace: "Montserrat", fontSize: 7.2, color: BRAND.slate, bold: true, align: "right", margin: 0.01 });
+        slide.addText(formatValue(values.current, row), { x: x + 5.72, y: yy, w: 0.7, h: rowH - 0.03, fontFace: "Montserrat", fontSize: 7.2, color: BRAND.navy, bold: true, align: "right", margin: 0.01 });
+        slide.addText(formatValue(row.budget, row), { x: x + 6.5, y: yy, w: 0.7, h: rowH - 0.03, fontFace: "Montserrat", fontSize: 7.2, color: BRAND.orange, bold: true, align: "right", margin: 0.01 });
+        slide.addText(formatPercent(periodCompliance(row), 0), { x: x + 7.28, y: yy, w: 0.7, h: rowH - 0.03, fontFace: "Montserrat", fontSize: 7.2, color: status.color, bold: true, align: "right", margin: 0.01 });
+      });
+    }
+
+    function addGlobalMatrixTable(pptx, slide, x, y, w, h) {
+      const rows = state.data.rows;
+      const columns = [
+        { label: "Nombre del objetivo estratégico", ratio: 1.25, key: "objective" },
+        { label: "Nombre del indicador (Métrica)", ratio: 1.9, key: "metric" },
+        { label: "Unidad de medición", ratio: 0.64, key: "unit" },
+        { label: "Fuente y emisor de la información para el cálculo", ratio: 1.35, key: "source" },
+        { label: "ACUMULADO", ratio: 0.76, key: "accumulated" },
+        { label: "%MINIMO REQUERIDO", ratio: 0.82, key: "budget" },
+        { label: "REAL % OBTENIDO del Periodo", ratio: 0.88, key: "current" },
+        { label: "% OBTENIDO DE CUMPLIMIENTO del Periodo", ratio: 1.05, key: "compliance" },
+        { label: "Peso de Indicador", ratio: 0.78, key: "weight" },
+        { label: "REAL INDICADOR", ratio: 0.88, key: "weighted" }
+      ];
+      const total = columns.reduce((acc, col) => acc + col.ratio, 0);
+      const widths = columns.map(col => w * col.ratio / total);
+      const headerH = 0.78;
+      const rowH = (h - headerH) / Math.max(rows.length, 1);
+      let cx = x;
+      columns.forEach((col, idx) => {
+        const cw = widths[idx];
+        slide.addShape(pptx.ShapeType.rect, {
+          x: cx, y, w: cw, h: headerH,
+          fill: { color: idx === columns.length - 1 ? BRAND.slate : BRAND.navy },
+          line: { color: "000000", width: 0.45 }
+        });
+        slide.addText(col.label, {
+          x: cx + 0.03, y: y + 0.07, w: cw - 0.06, h: headerH - 0.12,
+          fontFace: "Montserrat", fontSize: 5.4, bold: true, color: BRAND.white,
+          align: "center", valign: "mid", margin: 0.01, fit: "shrink", breakLine: false
+        });
+        cx += cw;
+      });
+
+      rows.forEach((row, rowIdx) => {
+        let cellX = x;
+        const yy = y + headerH + rowIdx * rowH;
+        const values = globalMatrixValues(row);
+        columns.forEach((col, colIdx) => {
+          const cw = widths[colIdx];
+          const isLast = colIdx === columns.length - 1;
+          const isMetric = col.key === "metric";
+          const value = values[col.key] || "";
+          slide.addShape(pptx.ShapeType.rect, {
+            x: cellX, y: yy, w: cw, h: rowH,
+            fill: { color: isLast ? "EFEFEF" : BRAND.white },
+            line: { color: "000000", width: 0.35 }
+          });
+          slide.addText(value, {
+            x: cellX + 0.04, y: yy + 0.04, w: cw - 0.08, h: rowH - 0.08,
+            fontFace: "Montserrat",
+            fontSize: colIdx < 4 ? 4.8 : 6.4,
+            bold: colIdx < 4 || colIdx >= 8,
+            color: col.key === "compliance" ? statusFor(periodCompliance(row)).color : "000000",
+            align: colIdx < 4 ? "center" : "center",
+            valign: "mid",
+            margin: 0.01,
+            fit: "shrink",
+            breakLine: false
+          });
+          cellX += cw;
+        });
+      });
+    }
+
+    function addKpiCompareBars(pptx, slide, row, x, y, w, h) {
+      const values = periodValues(row);
+      const items = [
+        [`Año anterior ${state.data.previousYear}`, values.previous, BRAND.slate],
+        [`Año actual ${state.data.currentYear}`, values.current, BRAND.navy],
+        ["Presupuesto", row.budget, BRAND.orange]
+      ];
+      const max = maxForBars(items.map(item => chartNumber(item[1], row)));
+      items.forEach((item, idx) => {
+        const yy = y + idx * 0.46;
+        slide.addText(item[0], { x, y: yy, w: 1.55, h: 0.18, fontFace: "Montserrat", fontSize: 7, color: BRAND.muted, bold: true, margin: 0.01 });
+        slide.addShape(pptx.ShapeType.rect, { x: x + 1.75, y: yy + 0.03, w: w - 2.55, h: 0.13, fill: { color: "E9EEF4" }, line: { color: "E9EEF4" }, radius: 0.05 });
+        slide.addShape(pptx.ShapeType.rect, { x: x + 1.75, y: yy + 0.03, w: Math.max(0.03, (w - 2.55) * ((chartNumber(item[1], row) || 0) / max)), h: 0.13, fill: { color: item[2] }, line: { color: item[2] }, radius: 0.05 });
+        slide.addText(formatValue(item[1], row), { x: x + w - 0.62, y: yy - 0.02, w: 0.6, h: 0.2, fontFace: "Montserrat", fontSize: 8, bold: true, color: item[2], align: "right", margin: 0.01 });
+      });
+    }
+
+    function addMonthlyBars(pptx, slide, row, x, y, w, h) {
+      slide.addShape(pptx.ShapeType.rect, { x, y, w, h, fill: { color: BRAND.white }, line: { color: BRAND.line }, radius: 0.12 });
+      slide.addText("Serie mensual", { x: x + 0.18, y: y + 0.15, w: 1.4, h: 0.18, fontFace: "Montserrat", fontSize: 8.5, bold: true, color: BRAND.navy, margin: 0.01 });
+      const max = maxForBars(row.series.flatMap(point => [chartNumber(point.previous, row), chartNumber(point.current, row), chartNumber(row.budget, row)]));
+      const plotX = x + 0.35;
+      const plotY = y + 0.76;
+      const plotW = w - 0.62;
+      const plotH = h - 1.12;
+      const groupW = plotW / 12;
+      const selectedIdx = Math.max(0, MONTHS.indexOf(normalizeMonth(state.selectedMonth)));
+      const selectedPoint = row.series[selectedIdx] || {};
+      const selectedValues = [
+        [`Ant. ${formatCompactValue(selectedPoint.previous, row)}`, BRAND.slate],
+        [`Actual ${formatCompactValue(selectedPoint.current, row)}`, BRAND.navy],
+        [`Ppto ${formatCompactValue(row.budget, row)}`, BRAND.orange]
+      ];
+      slide.addText(monthLabelFromKey(state.selectedMonth), { x: x + 1.35, y: y + 0.16, w: 0.72, h: 0.14, fontFace: "Montserrat", fontSize: 6, bold: true, color: BRAND.navy, align: "right", margin: 0.01, fit: "shrink" });
+      selectedValues.forEach((item, idx) => {
+        const cx = x + 2.15 + idx * 1.05;
+        slide.addShape(pptx.ShapeType.rect, { x: cx, y: y + 0.12, w: 0.92, h: 0.23, fill: { color: BRAND.white }, line: { color: item[1] }, radius: 0.06 });
+        slide.addText(item[0], { x: cx + 0.04, y: y + 0.175, w: 0.84, h: 0.08, fontFace: "Montserrat", fontSize: 4.8, bold: true, color: item[1], align: "center", margin: 0, fit: "shrink" });
+      });
+      row.series.forEach((point, idx) => {
+        const vals = [point.previous, point.current, row.budget];
+        const colors = [BRAND.slate, BRAND.navy, BRAND.orange];
+        if (idx === selectedIdx) {
+          slide.addShape(pptx.ShapeType.rect, {
+            x: plotX + idx * groupW + 0.02, y: plotY - 0.12, w: groupW - 0.04, h: plotH + 0.18,
+            fill: { color: "FFF8EF" }, line: { color: BRAND.orange, transparency: 20 }, radius: 0.04
+          });
+        }
+        vals.forEach((val, vIdx) => {
+          const bh = plotH * ((chartNumber(val, row) || 0) / max);
+          const bx = plotX + idx * groupW + 0.08 + vIdx * 0.055;
+          slide.addShape(pptx.ShapeType.rect, { x: bx, y: plotY + plotH - bh, w: 0.045, h: Math.max(0.01, bh), fill: { color: colors[vIdx] }, line: { color: colors[vIdx] } });
+        });
+        slide.addText(point.month.slice(0, 3), { x: plotX + idx * groupW - 0.01, y: plotY + plotH + 0.06, w: groupW, h: 0.12, fontFace: "Montserrat", fontSize: 5.2, color: BRAND.muted, align: "center", margin: 0 });
+      });
+    }
+
+    function addNextStepBox(pptx, slide, row, x, y, w, h) {
+      const nextStep = nextStepsFor(row);
+      const action = clean(nextStep.action) || "Sin acción capturada.";
+      const owner = clean(nextStep.owner) || "Sin responsable";
+      const date = nextStep.dueDate ? formatDate(nextStep.dueDate) : "Sin fecha";
+      const metaW = (w - 0.56) / 2;
+      const metaY = y + h - 0.48;
+      slide.addShape(pptx.ShapeType.rect, { x, y, w, h, fill: { color: BRAND.white }, line: { color: BRAND.line }, radius: 0.12 });
+      slide.addText("Next steps / acciones", { x: x + 0.18, y: y + 0.14, w: w - 0.36, h: 0.18, fontFace: "Montserrat", fontSize: 7.7, bold: true, color: BRAND.navy, margin: 0.01 });
+      slide.addText("Acción clave", { x: x + 0.2, y: y + 0.43, w: w - 0.4, h: 0.12, fontFace: "Montserrat", fontSize: 5.4, bold: true, color: BRAND.orange, margin: 0.01 });
+      slide.addText(shorten(action, 180), {
+        x: x + 0.2, y: y + 0.58, w: w - 0.4, h: 0.5,
+        fontFace: "Montserrat", fontSize: 8.6, bold: true, color: BRAND.ink,
+        margin: 0.03, fit: "shrink", valign: "top", breakLine: false
+      });
+      [
+        ["Responsable", shorten(owner, 34), BRAND.slate, x + 0.18],
+        ["Fecha compromiso", date, BRAND.orange, x + 0.38 + metaW]
+      ].forEach(item => {
+        slide.addShape(pptx.ShapeType.rect, { x: item[3], y: metaY, w: metaW, h: 0.34, fill: { color: item[2] === BRAND.orange ? "FFF8EF" : "F5F8FC" }, line: { color: item[2] }, radius: 0.07 });
+        slide.addText(item[0], { x: item[3] + 0.06, y: metaY + 0.05, w: metaW - 0.12, h: 0.08, fontFace: "Montserrat", fontSize: 4.6, bold: true, color: BRAND.muted, margin: 0, fit: "shrink" });
+        slide.addText(item[1], { x: item[3] + 0.06, y: metaY + 0.17, w: metaW - 0.12, h: 0.1, fontFace: "Montserrat", fontSize: 6.2, bold: true, color: item[2], margin: 0, fit: "shrink" });
+      });
+    }
+
+    function addCommentBox(pptx, slide, title, body, x, y, w, h) {
+      slide.addShape(pptx.ShapeType.rect, { x, y, w, h, fill: { color: BRAND.white }, line: { color: BRAND.line }, radius: 0.12 });
+      slide.addText(title, { x: x + 0.18, y: y + 0.14, w: w - 0.36, h: 0.18, fontFace: "Montserrat", fontSize: 7.5, bold: true, color: BRAND.muted, margin: 0.01 });
+      slide.addText(body, { x: x + 0.2, y: y + 0.4, w: w - 0.4, h: h - 0.55, fontFace: "Montserrat", fontSize: 10, color: BRAND.ink, margin: 0.03, fit: "shrink", valign: "top" });
+    }
+
+    function summaryMetrics() {
+      const rows = state.data.rows;
+      const weighted = weightedScore();
+      const avg = average(rows.map(periodCompliance));
+      const risks = rows.filter(row => {
+        const compliance = periodCompliance(row);
+        return compliance != null && compliance < 1;
+      }).length;
+      return { weighted, average: avg, risks };
+    }
+
+    function weightedScore() {
+      const rows = state.data.rows;
+      return sum(rows.map(row => {
+        const compliance = periodCompliance(row);
+        const weight = normalizeRatioNumber(row.weight);
+        if (weight == null || compliance == null) return normalizeRatioNumber(row.weightedScore);
+        return weight * compliance;
+      }));
+    }
+
+    function svgToDataUri(svg) {
+      return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`;
+    }
+
+    function showToast(message) {
+      els.toast.textContent = message;
+      els.toast.classList.add("show");
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => els.toast.classList.remove("show"), 2600);
+    }
+  </script>
+</body>
+</html>
