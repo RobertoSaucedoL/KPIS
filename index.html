@@ -30,6 +30,11 @@
       box-sizing: border-box;
     }
 
+    html {
+      background: #eef4f8;
+      scroll-behavior: smooth;
+    }
+
     body {
       margin: 0;
       color: var(--ink);
@@ -78,6 +83,9 @@
     }
 
     .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 30;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -158,7 +166,8 @@
       font-size: 13px;
       font-weight: 700;
       text-decoration: none;
-      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+      user-select: none;
+      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
     }
 
     .button:hover,
@@ -173,12 +182,19 @@
       background: var(--orange);
       border-color: var(--orange);
       color: var(--navy);
+      box-shadow: 0 10px 24px rgba(217, 137, 27, 0.22);
     }
 
     .button.primary:hover,
     .file-button.primary:hover {
       background: #f09a16;
       border-color: #f09a16;
+    }
+
+    .button:disabled {
+      cursor: wait;
+      opacity: 0.72;
+      transform: none;
     }
 
     main {
@@ -498,6 +514,29 @@
       background: #ffffff;
     }
 
+    .global-board-scroll,
+    .kpi-list,
+    #monthlyChart {
+      scrollbar-color: #b8c7d6 transparent;
+      scrollbar-width: thin;
+    }
+
+    .global-board-scroll::-webkit-scrollbar,
+    .kpi-list::-webkit-scrollbar,
+    #monthlyChart::-webkit-scrollbar {
+      width: 9px;
+      height: 9px;
+    }
+
+    .global-board-scroll::-webkit-scrollbar-thumb,
+    .kpi-list::-webkit-scrollbar-thumb,
+    #monthlyChart::-webkit-scrollbar-thumb {
+      background: #b8c7d6;
+      border: 2px solid transparent;
+      border-radius: 999px;
+      background-clip: padding-box;
+    }
+
     .global-matrix {
       width: 100%;
       min-width: 1120px;
@@ -532,6 +571,15 @@
       text-align: center;
       vertical-align: middle;
       overflow-wrap: anywhere;
+      transition: background 140ms ease;
+    }
+
+    .global-matrix tbody tr:hover td {
+      background: #fbfcff;
+    }
+
+    .global-matrix tbody tr:hover td:last-child {
+      background: #eaf0f6;
     }
 
     .global-matrix td:first-child,
@@ -1690,6 +1738,17 @@
 
       .split-caption {
         flex-direction: column;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
       }
     }
   </style>
@@ -4266,10 +4325,21 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       return lines.length ? lines.join("\n") : "Sin next steps capturados para este KPI.";
     }
 
+    function getPptxConstructor() {
+      return [
+        window.pptxgen,
+        window.PptxGenJS,
+        window.pptxgenjs,
+        window.PPTXGenJS
+      ].find(candidate => typeof candidate === "function") || null;
+    }
+
     async function exportPresentation() {
       try {
-        const PptxGen = window.pptxgen || window.PptxGenJS;
-        if (!PptxGen) throw new Error("No se encontró el generador de PowerPoint.");
+        const PptxGen = getPptxConstructor();
+        if (!PptxGen) {
+          throw new Error("El generador de PowerPoint no terminó de cargar. Recarga la página con Ctrl+R y vuelve a intentar.");
+        }
         els.pptBtn.disabled = true;
         els.pptBtn.textContent = "Generando...";
 
