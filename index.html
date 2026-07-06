@@ -314,7 +314,9 @@
       padding: 18px;
       border-radius: 8px;
       border: 1px solid var(--line);
-      background: var(--white);
+      background:
+        radial-gradient(circle at 78% 18%, rgba(238, 137, 1, 0.12), transparent 30%),
+        linear-gradient(135deg, #ffffff 0%, #f8fbfd 56%, #eef5fa 100%);
       box-shadow: var(--shadow);
     }
 
@@ -322,7 +324,9 @@
     .visual-summary.compact .traffic-panel {
       min-height: 150px;
       box-shadow: none;
-      background: var(--paper);
+      background:
+        radial-gradient(circle at 82% 18%, rgba(238, 137, 1, 0.1), transparent 28%),
+        linear-gradient(135deg, #ffffff 0%, #f6f9fc 100%);
     }
 
     .gauge-panel {
@@ -353,6 +357,7 @@
       width: min(100%, 360px);
       display: block;
       margin-left: auto;
+      filter: drop-shadow(0 16px 24px rgba(13, 28, 44, 0.12));
     }
 
     .traffic-list {
@@ -3676,7 +3681,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       els.countMeta.textContent = `Fuente: ${state.data.sourceFile || "archivo cargado"}`;
       els.riskValue.textContent = String(risks);
       els.riskMeta.textContent = risks === 1 ? "1 KPI requiere atención." : `${risks} KPIs requieren atención.`;
-      els.globalGauge.innerHTML = gaugeSvg(weighted, "Resultado ponderado", { large: true });
+      els.globalGauge.innerHTML = premiumGaugeSvg(weighted, "Resultado ponderado", { large: true });
       els.globalTraffic.innerHTML = trafficHtml(rows);
     }
 
@@ -3719,7 +3724,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
               ${miniBar("Ppto", values.budget, max, "#ee8901", row, values.budgetFormat)}
             </div>
             <div class="card-signal">
-              ${miniGaugeSvg(periodCompliance(row))}
+              ${premiumMiniGaugeSvg(periodCompliance(row))}
               <div class="signal-copy">${escapeHtml(status.label)} · ${escapeHtml(formatPercent(periodCompliance(row), 1))}</div>
             </div>
             ${cardCapture ? `<p class="card-followup" title="${escapeHtml(cardCapture)}">${escapeHtml(shorten(cardCapture, 92))}</p>` : ""}
@@ -3772,7 +3777,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       els.detailScore.textContent = formatPercent(compliance, 1);
       els.kpiMetaGrid.innerHTML = kpiMetaHtml(row);
       els.kpiGaugeTitle.textContent = status.label;
-      els.kpiGauge.innerHTML = gaugeSvg(compliance, "Cumplimiento KPI", { large: false });
+      els.kpiGauge.innerHTML = premiumGaugeSvg(compliance, "Cumplimiento KPI", { large: false });
       els.kpiTraffic.innerHTML = trafficHtml([row]);
       els.captureTitle.textContent = `KPI ${row.id} - ${shorten(row.metric || row.objective || "Indicador", 56)}`;
       els.captureStatus.className = `status ${status.className}`;
@@ -3976,6 +3981,98 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       `;
     }
 
+    function premiumGaugeSvg(value, label, opts = {}) {
+      const num = toNumber(value);
+      const maxRatio = 1.2;
+      const ratio = num == null ? 0 : Math.max(0, Math.min(maxRatio, num));
+      const angle = gaugeAngle(ratio, maxRatio);
+      const status = statusFor(num);
+      const width = opts.large ? 360 : 300;
+      const height = opts.large ? 215 : 178;
+      const cx = width / 2;
+      const cy = opts.large ? 158 : 130;
+      const r = opts.large ? 126 : 104;
+      const needle = polar(cx, cy, r - 33, angle);
+      const needleBase = polar(cx, cy, 15, angle + 180);
+      const needleLeft = polar(cx, cy, 7, angle - 88);
+      const needleRight = polar(cx, cy, 7, angle + 88);
+      const valueLabel = num == null ? "s/d" : formatPercent(num, 1);
+      const gaugeId = `g${Math.round(cx)}${Math.round(cy)}${opts.large ? "L" : "S"}${Math.round((num || 0) * 1000)}`;
+      const segments = [
+        { start: gaugeAngle(0, maxRatio), end: gaugeAngle(0.8, maxRatio), color: BRAND.red },
+        { start: gaugeAngle(0.8, maxRatio), end: gaugeAngle(1, maxRatio), color: BRAND.yellow },
+        { start: gaugeAngle(1, maxRatio), end: gaugeAngle(1.2, maxRatio), color: BRAND.green }
+      ];
+      const ticks = [
+        { value: 0, label: "0%" },
+        { value: 0.8, label: "80%" },
+        { value: 1, label: "100%" },
+        { value: 1.2, label: "120%" }
+      ].map(tick => {
+        const tickAngle = gaugeAngle(tick.value, maxRatio);
+        const outer = polar(cx, cy, r + 2, tickAngle);
+        const inner = polar(cx, cy, r - 13, tickAngle);
+        const text = polar(cx, cy, r + (opts.large ? 26 : 22), tickAngle);
+        return `
+          <line x1="${outer.x.toFixed(1)}" y1="${outer.y.toFixed(1)}" x2="${inner.x.toFixed(1)}" y2="${inner.y.toFixed(1)}" stroke="#71869A" stroke-width="${opts.large ? 2 : 1.6}" stroke-linecap="round" opacity="0.76"></line>
+          <text x="${text.x.toFixed(1)}" y="${text.y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-size="${opts.large ? 10 : 8.5}" font-weight="900" fill="#64748B">${tick.label}</text>
+        `;
+      }).join("");
+
+      return `
+        <svg class="gauge" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(label)} ${escapeHtml(valueLabel)}">
+          <defs>
+            <filter id="${gaugeId}Shadow" x="-20%" y="-20%" width="140%" height="150%">
+              <feDropShadow dx="0" dy="7" stdDeviation="7" flood-color="#0D1C2C" flood-opacity="0.2"></feDropShadow>
+            </filter>
+            <radialGradient id="${gaugeId}Face" cx="50%" cy="42%" r="70%">
+              <stop offset="0%" stop-color="#FFFFFF"></stop>
+              <stop offset="72%" stop-color="#F8FBFD"></stop>
+              <stop offset="100%" stop-color="#E8EEF5"></stop>
+            </radialGradient>
+          </defs>
+          <path d="${arcPath(cx, cy, r + 11, -140, 140)}" fill="none" stroke="#E5EDF4" stroke-width="${opts.large ? 34 : 29}" stroke-linecap="round"></path>
+          <g fill="none" stroke-linecap="round" filter="url(#${gaugeId}Shadow)">
+            ${segments.map(seg => `<path d="${arcPath(cx, cy, r + 11, seg.start, seg.end)}" stroke="#${seg.color}" stroke-width="${opts.large ? 24 : 20}"></path>`).join("")}
+            <path d="${arcPath(cx, cy, r - 17, -140, 140)}" stroke="#D7E2EC" stroke-width="2.2"></path>
+          </g>
+          ${ticks}
+          <circle cx="${cx}" cy="${cy}" r="${opts.large ? 48 : 40}" fill="url(#${gaugeId}Face)" stroke="#DCE6F0" stroke-width="1.2"></circle>
+          <path d="M ${needleBase.x.toFixed(1)} ${needleBase.y.toFixed(1)} L ${needleLeft.x.toFixed(1)} ${needleLeft.y.toFixed(1)} L ${needle.x.toFixed(1)} ${needle.y.toFixed(1)} L ${needleRight.x.toFixed(1)} ${needleRight.y.toFixed(1)} Z" fill="#${BRAND.navy}" opacity="0.97" filter="url(#${gaugeId}Shadow)"></path>
+          <circle cx="${cx}" cy="${cy}" r="${opts.large ? 15 : 12}" fill="#${BRAND.navy}"></circle>
+          <circle cx="${cx}" cy="${cy}" r="${opts.large ? 7 : 5.5}" fill="#${status.color}"></circle>
+          <text x="${cx}" y="${opts.large ? 58 : 50}" text-anchor="middle" font-size="${opts.large ? 34 : 28}" font-weight="900" fill="#${BRAND.navy}">${escapeHtml(valueLabel)}</text>
+          <text x="${cx}" y="${opts.large ? 84 : 73}" text-anchor="middle" font-size="${opts.large ? 12 : 10.5}" font-weight="900" fill="#${status.color}">${escapeHtml(status.label.toUpperCase())}</text>
+          <rect x="${cx - (opts.large ? 55 : 46)}" y="${height - (opts.large ? 24 : 22)}" width="${opts.large ? 110 : 92}" height="${opts.large ? 17 : 15}" rx="7" fill="#FFFFFF" stroke="#DDE7F0"></rect>
+          <text x="${cx}" y="${height - (opts.large ? 12 : 11)}" text-anchor="middle" font-size="${opts.large ? 9.2 : 8}" font-weight="900" fill="#64748B">META 100%</text>
+        </svg>
+      `;
+    }
+
+    function premiumMiniGaugeSvg(value) {
+      const num = toNumber(value);
+      const ratio = num == null ? 0 : Math.max(0, Math.min(1.2, num));
+      const angle = gaugeAngle(ratio, 1.2);
+      const needle = polar(21, 27, 16, angle);
+      const status = statusFor(num);
+      return `
+        <svg class="mini-gauge" viewBox="0 0 42 31" aria-hidden="true">
+          <path d="${arcPath(21, 27, 20, -140, 140)}" fill="none" stroke="#E4ECF4" stroke-width="6" stroke-linecap="round"></path>
+          <path d="${arcPath(21, 27, 20, gaugeAngle(0, 1.2), gaugeAngle(0.8, 1.2))}" fill="none" stroke="#${BRAND.red}" stroke-width="4.4" stroke-linecap="round"></path>
+          <path d="${arcPath(21, 27, 20, gaugeAngle(0.8, 1.2), gaugeAngle(1, 1.2))}" fill="none" stroke="#${BRAND.yellow}" stroke-width="4.4" stroke-linecap="round"></path>
+          <path d="${arcPath(21, 27, 20, gaugeAngle(1, 1.2), gaugeAngle(1.2, 1.2))}" fill="none" stroke="#${BRAND.green}" stroke-width="4.4" stroke-linecap="round"></path>
+          <line x1="21" y1="27" x2="${needle.x}" y2="${needle.y}" stroke="#${BRAND.navy}" stroke-width="2.7" stroke-linecap="round"></line>
+          <circle cx="21" cy="27" r="4.2" fill="#FFFFFF" stroke="#${BRAND.navy}" stroke-width="1.4"></circle>
+          <circle cx="21" cy="27" r="2.1" fill="#${status.color}"></circle>
+        </svg>
+      `;
+    }
+
+    function gaugeAngle(value, maxRatio = 1.2) {
+      const ratio = Math.max(0, Math.min(maxRatio, toNumber(value) ?? 0));
+      return -140 + (ratio / maxRatio) * 280;
+    }
+
     function polar(cx, cy, r, angle) {
       const rad = (angle - 90) * Math.PI / 180;
       return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
@@ -4107,7 +4204,6 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
           <line x1="${left}" x2="${width - right}" y1="${top + innerH}" y2="${top + innerH}" stroke="#9db4c7" stroke-width="1.4"></line>
           ${rects}
           ${budgetLine}
-          <text x="${width - right}" y="${height - 16}" text-anchor="end" style="fill:#64748B;font-size:8.2px;font-weight:800">Barras: ant./actual · Linea: ppto</text>
         </svg>
       `;
     }
