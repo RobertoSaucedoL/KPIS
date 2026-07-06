@@ -820,7 +820,8 @@
     }
 
     .track[data-tooltip],
-    .chart rect[data-tooltip] {
+    .chart rect[data-tooltip],
+    .chart circle[data-tooltip] {
       cursor: help;
     }
 
@@ -3266,6 +3267,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 
       const headers = rows[headerIndex].map(clean);
       const config = extractConfig(workbook, rows);
+      const detailSeries = parseDetailSheets(workbook, config, kpisName);
       const col = {
         no: findCol(headers, ["FOLIO", "NO.", "NO"]),
         objective: findCol(headers, ["NOMBRE DEL OBJETIVO ESTRATEGICO", "NOMBRE DEL OBJETIVO"]),
@@ -3296,11 +3298,15 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
           current: cellFormat(sheet, rowIndex, col.current),
           months: Object.fromEntries(MONTHS.map(month => [month, cellFormat(sheet, rowIndex, monthCols[month])]))
         };
-        const series = MONTHS.map((month, idx) => ({
+        let series = MONTHS.map((month, idx) => ({
           month: MONTH_LABELS[idx],
           current: toNumber(row[monthCols[month]]),
           currentFormat: valueFormats.months[month]
         }));
+        const detail = matchDetailSeries(detailSeries, { id, objective, metric });
+        if (detail) {
+          series = mergeDetailSeries(series, detail.series);
+        }
         const primaryFormats = [
           valueFormats.budget,
           valueFormats.current,
@@ -3331,6 +3337,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
           compliance,
           weight,
           weightedScore: firstNumber(normalizeRatioNumber(row[col.weighted]), weight != null && compliance != null ? weight * compliance : null),
+          detailSheet: detail?.sheetName || "",
           series
         });
       }
@@ -3345,6 +3352,152 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         sourceFile: fileName,
         rows: mergedRows
       };
+    }
+
+    function parseDetailSheets(workbook, config, kpisName) {
+      const currentYear = Number(config.currentYear) || new Date().getFullYear();
+      const previousYear = currentYear - 1;
+      return workbook.SheetNames
+        .filter(sheetName => {
+          const normalized = normalize(sheetName);
+          if (normalized === normalize(kpisName) || normalized === "KPIS") return false;
+          if (isAuxiliarySheetName(sheetName)) return false;
+          if (normalized.includes(`${previousYear} KPI`) || (normalized.includes(String(previousYear)) && normalized.includes("KPI"))) return false;
+          return true;
+        })
+        .map(sheetName => parseMonthlyDetailSheet(workbook, sheetName, { currentYear, previousYear }))
+        .filter(Boolean);
+    }
+
+    function parseMonthlyDetailSheet(workbook, sheetName, config) {
+      const rows = sheetRows(workbook, sheetName);
+      if (!rows.length) return null;
+      const headerIndex = findMonthlyDetailHeaderRow(rows, config);
+      if (headerIndex < 0) return null;
+
+      const sheet = workbook.Sheets[sheetName];
+      const headers = (rows[headerIndex] || []).map(clean);
+      const monthCol = findCol(headers, ["MES", "MONTH"]);
+      const previousCol = findDetailValueCol(headers, "previous", config);
+      const budgetCol = findDetailValueCol(headers, "budget", config);
+      const currentCol = findDetailValueCol(headers, "current", config);
+      if (monthCol == null || (previousCol == null && budgetCol == null && currentCol == null)) return null;
+
+      const pointsByMonth = new Map();
+      for (let rowIndex = headerIndex + 1; rowIndex < rows.length; rowIndex += 1) {
+        const row = rows[rowIndex] || [];
+        const month = normalizeMonth(row[monthCol]);
+        if (!month) continue;
+        const point = {
+          month: monthLabelFromKey(month),
+          previous: toNumber(row[previousCol]),
+          current: toNumber(row[currentCol]),
+          budget: toNumber(row[budgetCol]),
+          previousFormat: cellFormat(sheet, rowIndex, previousCol),
+          currentFormat: cellFormat(sheet, rowIndex, currentCol),
+          budgetFormat: cellFormat(sheet, rowIndex, budgetCol)
+        };
+        if ([point.previous, point.current, point.budget].some(value => value != null)) {
+          pointsByMonth.set(month, point);
+        }
+      }
+      if (!pointsByMonth.size) return null;
+
+      return {
+        sheetName,
+        leadingNumber: leadingSheetNumber(sheetName),
+        keyText: normalize(sheetName),
+        compactKey: compactText(sheetName),
+        series: MONTHS.map(month => pointsByMonth.get(month) || { month: monthLabelFromKey(month) })
+      };
+    }
+
+    function findMonthlyDetailHeaderRow(rows, config) {
+      return rows.findIndex(row => {
+        const headers = (row || []).map(clean);
+        const monthCol = findCol(headers, ["MES", "MONTH"]);
+        if (monthCol == null) return false;
+        return ["previous", "budget", "current"].some(role => findDetailValueCol(headers, role, config) != null);
+      });
+    }
+
+    function findDetailValueCol(headers, role, config) {
+      const currentYear = String(config.currentYear || "");
+      const previousYear = String(config.previousYear || "");
+      const budgetPattern = /(FCST|FORECAS|FORECAST|BUDGET|PRESUP|PRESUPUESTO|PTO|PPTO|PTTO|PPT|PPTTO|OBJETIVO|TARGET|META|MINIMO|REQUERIDO|PLAN|PRONOSTICO|PROYECCION|PROYECTADO)/;
+      const candidates = headers.map((header, index) => {
+        const normalized = normalize(header);
+        const compact = compactText(header);
+        if (!normalized && !compact) return null;
+        let score = null;
+        const isCompliance = /CUMPLIMIENTO|EVALUACION|PONDERADO|REALINDICADOR|PESOINDICADOR/.test(compact);
+        if (role === "previous") {
+          if (compact === previousYear) score = 0;
+          else if (previousYear && compact.includes(previousYear) && !isCompliance) score = 2;
+          else if (/(ANTERIOR|PREVIO|PY|LY|AA|ANIOANTERIOR|ANOANTERIOR)/.test(compact) && !isCompliance) score = 4;
+        }
+        if (role === "current") {
+          if (compact === currentYear) score = 0;
+          else if (currentYear && compact.includes(currentYear) && !isCompliance) score = 2;
+          else if (/(ACTUAL|REAL|CY|RESULTADO|OBTENIDO|EJECUTADO)/.test(compact) && !isCompliance && !budgetPattern.test(compact)) score = 5;
+        }
+        if (role === "budget") {
+          if (budgetPattern.test(compact) && !isCompliance) score = 1;
+        }
+        return score == null ? null : { index, score: score + index / 10000 };
+      }).filter(Boolean).sort((a, b) => a.score - b.score || a.index - b.index);
+      return candidates.length ? candidates[0].index : null;
+    }
+
+    function matchDetailSeries(records, row) {
+      if (!records?.length) return null;
+      const idNumber = clean(row.id).match(/\d+/)?.[0] || "";
+      const metricText = normalize(row.metric || "");
+      const objectiveText = normalize(row.objective || "");
+      const metricCompact = compactText(row.metric || "");
+      const objectiveCompact = compactText(row.objective || "");
+      const tokens = significantTokens(`${row.metric || ""} ${row.objective || ""}`);
+
+      const ranked = records.map(record => {
+        let score = 0;
+        if (metricCompact && record.compactKey.includes(metricCompact)) score += 160;
+        if (objectiveCompact && record.compactKey.includes(objectiveCompact)) score += 120;
+        if (metricText && record.keyText.includes(metricText)) score += 130;
+        if (objectiveText && record.keyText.includes(objectiveText)) score += 95;
+        if (idNumber && record.leadingNumber === idNumber) score += 80;
+        const hits = tokens.filter(token => record.keyText.includes(token) || record.compactKey.includes(token));
+        score += hits.length * 18;
+        return { record, score };
+      }).sort((a, b) => b.score - a.score);
+
+      return ranked[0]?.score >= 45 ? ranked[0].record : null;
+    }
+
+    function mergeDetailSeries(summarySeries, detailSeries) {
+      return MONTH_LABELS.map((month, idx) => {
+        const base = (summarySeries || []).find(point => normalizeMonth(point.month) === MONTHS[idx]) || {};
+        const detail = (detailSeries || []).find(point => normalizeMonth(point.month) === MONTHS[idx]) || {};
+        return {
+          month,
+          previous: firstNumber(detail.previous, base.previous),
+          current: firstNumber(detail.current, base.current),
+          budget: firstNumber(detail.budget, base.budget),
+          previousFormat: clean(detail.previousFormat || base.previousFormat),
+          currentFormat: clean(detail.currentFormat || base.currentFormat),
+          budgetFormat: clean(detail.budgetFormat || base.budgetFormat)
+        };
+      });
+    }
+
+    function leadingSheetNumber(value) {
+      return clean(value).match(/^\s*(\d+)/)?.[1] || "";
+    }
+
+    function significantTokens(value) {
+      const stop = new Set(["DEL", "DE", "LA", "EL", "LOS", "LAS", "POR", "PARA", "CON", "Y", "EN", "INDICADOR", "METRICA"]);
+      return normalize(value)
+        .split(/[^A-Z0-9]+/)
+        .filter(token => token.length >= 3 && !stop.has(token));
     }
 
     function parsePreviousYear(workbook, currentYear) {
@@ -3398,7 +3551,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         previousCompliance: match.previousCompliance,
         series: row.series.map(point => ({
           ...point,
-          previous: previousByMonth.get(normalizeMonth(point.month))
+          previous: firstNumber(point.previous, previousByMonth.get(normalizeMonth(point.month)))
         }))
       };
     }
@@ -3430,8 +3583,10 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
             month,
             current: toNumber(existing.current),
             previous: toNumber(existing.previous),
+            budget: toNumber(existing.budget),
             currentFormat: clean(existing.currentFormat),
-            previousFormat: clean(existing.previousFormat)
+            previousFormat: clean(existing.previousFormat),
+            budgetFormat: clean(existing.budgetFormat)
           };
         });
         const incomingFormats = row.valueFormats || {};
@@ -3534,7 +3689,11 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       }
       els.kpiCards.innerHTML = rows.map(row => {
         const values = periodValues(row);
-        const max = maxForBars([chartNumber(values.previous, row), chartNumber(values.current, row), chartNumber(row.budget, row)]);
+        const max = maxForBars([
+          chartNumber(values.previous, row, values.previousFormat),
+          chartNumber(values.current, row, values.currentFormat),
+          chartNumber(values.budget, row, values.budgetFormat)
+        ]);
         const status = statusFor(periodCompliance(row));
         const comment = commentFor(row);
         const nextStep = nextStepsFor(row);
@@ -3557,7 +3716,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
             <div class="mini-bars">
               ${miniBar("Ant.", values.previous, max, "#7796ab", row, values.previousFormat)}
               ${miniBar("Actual", values.current, max, "#0d1c2c", row, values.currentFormat)}
-              ${miniBar("Ppto", row.budget, max, "#ee8901", row, row.valueFormats?.budget)}
+              ${miniBar("Ppto", values.budget, max, "#ee8901", row, values.budgetFormat)}
             </div>
             <div class="card-signal">
               ${miniGaugeSvg(periodCompliance(row))}
@@ -3601,7 +3760,11 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       const values = periodValues(row);
       const compliance = periodCompliance(row);
       const status = statusFor(compliance);
-      const max = maxForBars([chartNumber(values.previous, row), chartNumber(values.current, row), chartNumber(row.budget, row)]);
+        const max = maxForBars([
+          chartNumber(values.previous, row, values.previousFormat),
+          chartNumber(values.current, row, values.currentFormat),
+          chartNumber(values.budget, row, values.budgetFormat)
+        ]);
       const nextStep = nextStepsFor(row);
 
       els.detailTitle.textContent = row.metric || "Indicador sin nombre";
@@ -3622,7 +3785,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       els.comparisonGrid.innerHTML = [
         metricTile(`Año anterior ${state.data.previousYear}`, values.previous, max, "#7796ab", row, values.previousFormat),
         metricTile(`Año actual ${state.data.currentYear}`, values.current, max, "#0d1c2c", row, values.currentFormat),
-        metricTile("Presupuesto", row.budget, max, "#ee8901", row, row.valueFormats?.budget)
+        metricTile("Presupuesto", values.budget, max, "#ee8901", row, values.budgetFormat)
       ].join("");
       els.monthlyChart.innerHTML = monthlySvg(row);
     }
@@ -3673,7 +3836,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     }
 
     function miniBar(label, value, max, color, row, formatHint = "") {
-      const chartValue = chartNumber(value, row);
+      const chartValue = chartNumber(value, row, formatHint);
       const width = chartValue == null ? 0 : Math.max(2, Math.min(100, Math.abs(chartValue) / max * 100));
       const display = formatValue(value, row, formatHint);
       const tooltip = `${label}: ${display}`;
@@ -3687,7 +3850,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     }
 
     function metricTile(label, value, max, color, row, formatHint = "") {
-      const chartValue = chartNumber(value, row);
+      const chartValue = chartNumber(value, row, formatHint);
       const width = chartValue == null ? 0 : Math.max(2, Math.min(100, Math.abs(chartValue) / max * 100));
       const display = formatValue(value, row, formatHint);
       const tooltip = `${label}: ${display}`;
@@ -3713,7 +3876,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
           primary: true
         },
         { label: "Acumulado", value: formatAccumulated(row, values.current) },
-        { label: "Mínimo", value: formatValue(row.budget, row, row.valueFormats?.budget) },
+        { label: "Mínimo", value: formatValue(values.budget, row, values.budgetFormat) },
         { label: "Real", value: formatValue(values.current, row, values.currentFormat) },
         { label: "Cumplimiento", value: formatPercent(compliance, 1) },
         { label: "Peso", value: formatPercent(row.weight, 0) },
@@ -3828,8 +3991,8 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     function monthlySvg(row) {
       const width = 760;
       const height = 312;
-      const left = 42;
-      const right = 18;
+      const left = 54;
+      const right = 22;
       const top = 58;
       const bottom = 42;
       const innerW = width - left - right;
@@ -3843,34 +4006,50 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
           fullLabel: label,
           previous: toNumber(seriesPoint.previous),
           current: toNumber(seriesPoint.current),
-          budget: toNumber(row.budget),
+          budget: firstNumber(seriesPoint.budget, row.budget),
           previousFormat: clean(seriesPoint.previousFormat),
           currentFormat: clean(seriesPoint.currentFormat),
-          budgetFormat: clean(row.valueFormats?.budget)
+          budgetFormat: clean(seriesPoint.budgetFormat || row.valueFormats?.budget)
         };
       });
-      const max = maxForBars(points.flatMap(point => [chartNumber(point.previous, row), chartNumber(point.current, row), chartNumber(point.budget, row)]));
+      const chartType = chartValueType(row, points);
+      const chartValues = points.flatMap(point => [
+        chartNumber(point.previous, row, point.previousFormat, chartType),
+        chartNumber(point.current, row, point.currentFormat, chartType),
+        chartNumber(point.budget, row, point.budgetFormat, chartType)
+      ]);
+      const max = maxForChart(chartValues, row, chartType);
       const groupW = innerW / points.length;
-      const barW = Math.max(5, Math.min(14, groupW / 5));
-      const y = value => {
-        const chartValue = chartNumber(value, row);
+      const barW = Math.max(8, Math.min(16, groupW / 4));
+      const y = (value, format) => {
+        const chartValue = chartNumber(value, row, format, chartType);
         return top + innerH - ((chartValue == null ? 0 : Math.abs(chartValue)) / max * innerH);
       };
-      const h = value => {
-        const chartValue = chartNumber(value, row);
+      const h = (value, format) => {
+        const chartValue = chartNumber(value, row, format, chartType);
         return chartValue == null ? 0 : Math.max(1, Math.abs(chartValue) / max * innerH);
       };
+      const xCenter = idx => left + idx * groupW + groupW / 2;
+      const budgetLinePoints = points.map((point, idx) => {
+        const chartValue = chartNumber(point.budget, row, point.budgetFormat, chartType);
+        if (chartValue == null) return null;
+        return {
+          x: xCenter(idx),
+          y: y(point.budget, point.budgetFormat),
+          point
+        };
+      }).filter(Boolean);
+      const budgetPath = budgetLinePoints.map((item, idx) => `${idx ? "L" : "M"} ${item.x.toFixed(1)} ${item.y.toFixed(1)}`).join(" ");
       const rects = points.map((point, idx) => {
-        const x0 = left + idx * groupW + groupW / 2 - barW * 1.7;
+        const x0 = xCenter(idx) - barW - 2;
         const bars = [
           { key: "previous", label: `Ant. ${state.data.previousYear}`, value: point.previous, format: point.previousFormat, x: x0, color: `#${BRAND.slate}` },
-          { key: "current", label: `Actual ${state.data.currentYear}`, value: point.current, format: point.currentFormat, x: x0 + barW + 3, color: `#${BRAND.navy}` },
-          { key: "budget", label: "Ppto", value: point.budget, format: point.budgetFormat, x: x0 + (barW + 3) * 2, color: `#${BRAND.orange}` }
+          { key: "current", label: `Actual ${state.data.currentYear}`, value: point.current, format: point.currentFormat, x: x0 + barW + 4, color: `#${BRAND.navy}` }
         ];
         const labels = bars.filter(bar => (
           bar.value != null && bar.key === "current" && (idx === selectedIdx || idx % 2 === 0)
         )).map(bar => {
-          const labelY = Math.max(top + 8, y(bar.value) - 7);
+          const labelY = Math.max(top + 10, y(bar.value, bar.format) - 8);
           return `<text class="bar-value" x="${bar.x + barW / 2}" y="${labelY}" text-anchor="middle" style="fill:${bar.color}">${escapeHtml(formatCompactValue(bar.value, row, bar.format))}</text>`;
         }).join("");
         const selectedBand = idx === selectedIdx ? `<rect x="${left + idx * groupW + 2}" y="${top - 10}" width="${groupW - 4}" height="${innerH + 16}" fill="#fff8ef" stroke="#${BRAND.orange}" stroke-width="1" rx="6" opacity="0.86"></rect>` : "";
@@ -3878,12 +4057,19 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
           ${selectedBand}
           ${bars.map(bar => {
             const tooltip = `${bar.label} ${point.fullLabel}: ${formatValue(bar.value, row, bar.format)}`;
-            return `<rect x="${bar.x}" y="${y(bar.value)}" width="${barW}" height="${h(bar.value)}" fill="${bar.color}" rx="2" data-tooltip="${escapeHtml(tooltip)}" aria-label="${escapeHtml(tooltip)}" tabindex="0"><title>${escapeHtml(tooltip)}</title></rect>`;
+            return `<rect x="${bar.x}" y="${y(bar.value, bar.format)}" width="${barW}" height="${h(bar.value, bar.format)}" fill="${bar.color}" rx="2" data-tooltip="${escapeHtml(tooltip)}" aria-label="${escapeHtml(tooltip)}" tabindex="0"><title>${escapeHtml(tooltip)}</title></rect>`;
           }).join("")}
           ${labels}
           <text x="${left + idx * groupW + groupW / 2}" y="${height - 16}" text-anchor="middle">${point.label}</text>
         `;
       }).join("");
+      const budgetLine = budgetPath ? `
+        <path d="${budgetPath}" fill="none" stroke="#${BRAND.orange}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
+        ${budgetLinePoints.map(item => {
+          const tooltip = `Ppto ${item.point.fullLabel}: ${formatValue(item.point.budget, row, item.point.budgetFormat)}`;
+          return `<circle cx="${item.x}" cy="${item.y}" r="4.1" fill="#ffffff" stroke="#${BRAND.orange}" stroke-width="2.4" data-tooltip="${escapeHtml(tooltip)}" aria-label="${escapeHtml(tooltip)}" tabindex="0"><title>${escapeHtml(tooltip)}</title></circle>`;
+        }).join("")}
+      ` : "";
       const selectedPoint = points[selectedIdx] || points[0] || {};
       const chips = [
         { label: `Ant. ${formatCompactValue(selectedPoint.previous, row, selectedPoint.previousFormat)}`, color: `#${BRAND.slate}` },
@@ -3896,6 +4082,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       const chipY = 10;
       const selectedSummary = `
         <text x="${left}" y="25" text-anchor="start" style="fill:#${BRAND.navy};font-size:10px;font-weight:900">${escapeHtml(selectedPoint.fullLabel || "")}</text>
+        <text x="${width - right}" y="25" text-anchor="end" style="fill:#64748B;font-size:8.8px;font-weight:800">${escapeHtml(chartScaleLabel(chartType))}</text>
         ${chips.map((chip, idx) => {
           const x = chipX + idx * (chipW + chipGap);
           return `
@@ -3907,7 +4094,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       `;
       const grid = [0, 0.25, 0.5, 0.75, 1].map(tick => {
         const yy = top + innerH - tick * innerH;
-        const label = formatAxis(max * tick, row);
+        const label = formatAxis(max * tick, row, "", chartType);
         return `
           <line x1="${left}" x2="${width - right}" y1="${yy}" y2="${yy}" stroke="#d9e2ee" stroke-width="1"></line>
           <text x="${left - 8}" y="${yy + 4}" text-anchor="end">${label}</text>
@@ -3919,6 +4106,8 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
           ${grid}
           <line x1="${left}" x2="${width - right}" y1="${top + innerH}" y2="${top + innerH}" stroke="#9db4c7" stroke-width="1.4"></line>
           ${rects}
+          ${budgetLine}
+          <text x="${width - right}" y="${height - 16}" text-anchor="end" style="fill:#64748B;font-size:8.2px;font-weight:800">Barras: ant./actual · Linea: ppto</text>
         </svg>
       `;
     }
@@ -3940,17 +4129,25 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     function periodValues(row) {
       const month = normalizeMonth(state.selectedMonth);
       const point = (row.series || []).find(item => normalizeMonth(item.month) === month) || {};
+      const rowCurrent = toNumber(row.current);
+      const pointCurrent = toNumber(point.current);
+      const rowPrevious = toNumber(row.previous);
+      const pointPrevious = toNumber(point.previous);
+      const rowBudget = toNumber(row.budget);
+      const pointBudget = toNumber(point.budget);
       return {
-        current: firstNumber(point.current, row.current),
-        previous: firstNumber(point.previous, row.previous),
-        currentFormat: clean(point.currentFormat || row.valueFormats?.current),
-        previousFormat: clean(point.previousFormat)
+        current: firstNumber(rowCurrent, pointCurrent),
+        previous: firstNumber(rowPrevious, pointPrevious),
+        budget: firstNumber(rowBudget, pointBudget),
+        currentFormat: clean(rowCurrent != null ? row.valueFormats?.current : point.currentFormat),
+        previousFormat: clean(rowPrevious != null ? row.previousFormat : point.previousFormat),
+        budgetFormat: clean(rowBudget != null ? row.valueFormats?.budget : point.budgetFormat)
       };
     }
 
     function periodCompliance(row) {
       const values = periodValues(row);
-      return firstNumber(normalizeRatioNumber(row.compliance), computeCompliance(values.current, row.budget, row));
+      return firstNumber(normalizeRatioNumber(row.compliance), computeCompliance(values.current, values.budget, row));
     }
 
     function valueForMonth(series, month, key) {
@@ -4002,7 +4199,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         unit: row.unit || "s/u",
         source: shorten(row.sourceComment || "Fuente RH", 58),
         accumulated: formatAccumulated(row, values.current),
-        budget: formatValue(row.budget, row, row.valueFormats?.budget),
+        budget: formatValue(values.budget, row, values.budgetFormat),
         current: formatValue(values.current, row, values.currentFormat),
         compliance: formatPercent(compliance, 0),
         weight: formatPercent(row.weight, 0),
@@ -4238,6 +4435,24 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       return Math.max(1, ...valid);
     }
 
+    function maxForChart(values, row, valueType = "") {
+      const type = normalizeValueType(valueType) || valueTypeFor(row);
+      const valid = values.map(toNumber).filter(value => value != null).map(Math.abs);
+      const rawMax = Math.max(...valid, 0);
+      if (!rawMax) return type === "percent" ? 1 : 1;
+      const padded = rawMax * 1.14;
+      if (type === "percent") {
+        if (padded <= 1) return 1;
+        if (padded <= 1.2) return 1.2;
+        if (padded <= 1.5) return 1.5;
+        return Math.ceil(padded * 2) / 2;
+      }
+      const magnitude = Math.pow(10, Math.floor(Math.log10(padded)));
+      const normalized = padded / magnitude;
+      const nice = normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10;
+      return nice * magnitude;
+    }
+
     function normalizeValueType(value) {
       const type = normalize(value);
       if (["PERCENT", "PERCENTAGE", "PORCENTAJE"].includes(type)) return "percent";
@@ -4305,9 +4520,39 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       return valueTypeFor(row) === "count";
     }
 
-    function chartNumber(value, row) {
-      if (isPercentRow(row)) return normalizePercentNumber(value);
-      return toNumber(value);
+    function chartNumber(value, row, formatHint = "", typeOverride = "") {
+      const num = toNumber(value);
+      if (num == null) return null;
+      const hintedType = isForcedNumberMetric(row) ? "" : valueTypeFromFormat(formatHint);
+      const type = normalizeValueType(typeOverride) || hintedType || valueTypeFor(row);
+      if (type === "percent") return normalizePercentNumber(num);
+      return num;
+    }
+
+    function chartValueType(row, points = []) {
+      const formats = points.flatMap(point => [
+        point?.previousFormat,
+        point?.currentFormat,
+        point?.budgetFormat
+      ]).filter(Boolean);
+      if (formats.some(formatHasCurrency)) return "currency";
+      if (!isForcedNumberMetric(row) && formats.some(formatHasPercent)) return "percent";
+      if (isForcedNumberMetric(row)) return "number";
+      return valueTypeFor(row);
+    }
+
+    function chartScaleLabel(type) {
+      if (type === "currency") return "Escala auto en miles";
+      if (type === "percent") return "Escala auto en porcentaje";
+      if (type === "duration") return "Escala auto de tiempo";
+      return "Escala auto";
+    }
+
+    function chartDisplayLabel(type) {
+      if (type === "currency") return "valores monetarios";
+      if (type === "percent") return "porcentaje";
+      if (type === "duration") return "tiempo";
+      return "valor";
     }
 
     function normalizePercentNumber(value) {
@@ -4412,12 +4657,14 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       }).format(num);
     }
 
-    function formatAxis(value, row) {
+    function formatAxis(value, row, formatHint = "", typeOverride = "") {
       const num = toNumber(value);
       if (num == null) return "";
-      if (isPercentRow(row)) return formatPercent(normalizePercentNumber(num), 0);
-      if (isCurrencyOrLargeUnit(row)) return formatCurrency(num, true);
-      if (isDurationRow(row)) return formatDuration(num, row, true);
+      const hintedType = isForcedNumberMetric(row) ? "" : valueTypeFromFormat(formatHint);
+      const type = normalizeValueType(typeOverride) || hintedType || valueTypeFor(row);
+      if (type === "percent") return formatPercent(normalizePercentNumber(num), 0);
+      if (type === "currency") return formatCurrency(num, true);
+      if (type === "duration") return formatDuration(num, row, true);
       if (Math.abs(num) >= 1000) return formatThousands(num).replace(" mil", "k");
       return new Intl.NumberFormat("es-MX", { maximumFractionDigits: 0 }).format(num);
     }
@@ -5180,7 +5427,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         slide.addText(shorten(row.metric || "", 62), { x: x + 0.35, y: yy, w: 4.35, h: rowH - 0.03, fontFace: "Montserrat", fontSize: 6.9, bold: true, color: BRAND.ink, margin: 0.01, fit: "shrink" });
         slide.addText(formatValue(values.previous, row, values.previousFormat), { x: x + 4.92, y: yy, w: 0.7, h: rowH - 0.03, fontFace: "Montserrat", fontSize: 7.2, color: BRAND.slate, bold: true, align: "right", margin: 0.01 });
         slide.addText(formatValue(values.current, row, values.currentFormat), { x: x + 5.72, y: yy, w: 0.7, h: rowH - 0.03, fontFace: "Montserrat", fontSize: 7.2, color: BRAND.navy, bold: true, align: "right", margin: 0.01 });
-        slide.addText(formatValue(row.budget, row, row.valueFormats?.budget), { x: x + 6.5, y: yy, w: 0.7, h: rowH - 0.03, fontFace: "Montserrat", fontSize: 7.2, color: BRAND.orange, bold: true, align: "right", margin: 0.01 });
+        slide.addText(formatValue(values.budget, row, values.budgetFormat), { x: x + 6.5, y: yy, w: 0.7, h: rowH - 0.03, fontFace: "Montserrat", fontSize: 7.2, color: BRAND.orange, bold: true, align: "right", margin: 0.01 });
         slide.addText(formatPercent(periodCompliance(row), 0), { x: x + 7.28, y: yy, w: 0.7, h: rowH - 0.03, fontFace: "Montserrat", fontSize: 7.2, color: status.color, bold: true, align: "right", margin: 0.01 });
       });
     }
@@ -5255,14 +5502,15 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       const items = [
         [`Año anterior ${state.data.previousYear}`, values.previous, BRAND.slate, values.previousFormat],
         [`Año actual ${state.data.currentYear}`, values.current, BRAND.navy, values.currentFormat],
-        ["Presupuesto", row.budget, BRAND.orange, row.valueFormats?.budget]
+        ["Presupuesto", values.budget, BRAND.orange, values.budgetFormat]
       ];
-      const max = maxForBars(items.map(item => chartNumber(item[1], row)));
+      const chartType = chartValueType(row, [{ previousFormat: values.previousFormat, currentFormat: values.currentFormat, budgetFormat: values.budgetFormat }]);
+      const max = maxForChart(items.map(item => chartNumber(item[1], row, item[3], chartType)), row, chartType);
       items.forEach((item, idx) => {
         const yy = y + idx * 0.46;
         slide.addText(item[0], { x, y: yy, w: 1.55, h: 0.18, fontFace: "Montserrat", fontSize: 7, color: BRAND.muted, bold: true, margin: 0.01 });
         slide.addShape(pptx.ShapeType.rect, { x: x + 1.75, y: yy + 0.03, w: w - 2.55, h: 0.13, fill: { color: "E9EEF4" }, line: { color: "E9EEF4" }, radius: 0.05 });
-        slide.addShape(pptx.ShapeType.rect, { x: x + 1.75, y: yy + 0.03, w: Math.max(0.03, (w - 2.55) * ((chartNumber(item[1], row) || 0) / max)), h: 0.13, fill: { color: item[2] }, line: { color: item[2] }, radius: 0.05 });
+        slide.addShape(pptx.ShapeType.rect, { x: x + 1.75, y: yy + 0.03, w: Math.max(0.03, (w - 2.55) * ((chartNumber(item[1], row, item[3], chartType) || 0) / max)), h: 0.13, fill: { color: item[2] }, line: { color: item[2] }, radius: 0.05 });
         slide.addText(formatValue(item[1], row, item[3]), { x: x + w - 0.62, y: yy - 0.02, w: 0.6, h: 0.2, fontFace: "Montserrat", fontSize: 8, bold: true, color: item[2], align: "right", margin: 0.01 });
       });
     }
@@ -5270,7 +5518,12 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     function addMonthlyBars(pptx, slide, row, x, y, w, h) {
       slide.addShape(pptx.ShapeType.rect, { x, y, w, h, fill: { color: BRAND.white }, line: { color: BRAND.line }, radius: 0.12 });
       slide.addText("Serie mensual", { x: x + 0.18, y: y + 0.15, w: 1.4, h: 0.18, fontFace: "Montserrat", fontSize: 8.5, bold: true, color: BRAND.navy, margin: 0.01 });
-      const max = maxForBars(row.series.flatMap(point => [chartNumber(point.previous, row), chartNumber(point.current, row), chartNumber(row.budget, row)]));
+      const chartType = chartValueType(row, row.series);
+      const max = maxForChart(row.series.flatMap(point => [
+        chartNumber(point.previous, row, point.previousFormat, chartType),
+        chartNumber(point.current, row, point.currentFormat, chartType),
+        chartNumber(firstNumber(point.budget, row.budget), row, point.budgetFormat || row.valueFormats?.budget, chartType)
+      ]), row, chartType);
       const plotX = x + 0.35;
       const plotY = y + 0.76;
       const plotW = w - 0.62;
@@ -5281,7 +5534,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       const selectedValues = [
         [`Ant. ${formatCompactValue(selectedPoint.previous, row, selectedPoint.previousFormat)}`, BRAND.slate],
         [`Actual ${formatCompactValue(selectedPoint.current, row, selectedPoint.currentFormat)}`, BRAND.navy],
-        [`Ppto ${formatCompactValue(row.budget, row, row.valueFormats?.budget)}`, BRAND.orange]
+        [`Ppto ${formatCompactValue(firstNumber(selectedPoint.budget, row.budget), row, selectedPoint.budgetFormat || row.valueFormats?.budget)}`, BRAND.orange]
       ];
       slide.addText(monthLabelFromKey(state.selectedMonth), { x: x + 1.35, y: y + 0.16, w: 0.72, h: 0.14, fontFace: "Montserrat", fontSize: 6, bold: true, color: BRAND.navy, align: "right", margin: 0.01, fit: "shrink" });
       selectedValues.forEach((item, idx) => {
@@ -5290,7 +5543,8 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         slide.addText(item[0], { x: cx + 0.04, y: y + 0.175, w: 0.84, h: 0.08, fontFace: "Montserrat", fontSize: 4.8, bold: true, color: item[1], align: "center", margin: 0, fit: "shrink" });
       });
       row.series.forEach((point, idx) => {
-        const vals = [point.previous, point.current, row.budget];
+        const vals = [point.previous, point.current, firstNumber(point.budget, row.budget)];
+        const formats = [point.previousFormat, point.currentFormat, point.budgetFormat || row.valueFormats?.budget];
         const colors = [BRAND.slate, BRAND.navy, BRAND.orange];
         if (idx === selectedIdx) {
           slide.addShape(pptx.ShapeType.rect, {
@@ -5299,7 +5553,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
           });
         }
         vals.forEach((val, vIdx) => {
-          const bh = plotH * ((chartNumber(val, row) || 0) / max);
+          const bh = plotH * ((chartNumber(val, row, formats[vIdx], chartType) || 0) / max);
           const bx = plotX + idx * groupW + 0.08 + vIdx * 0.055;
           slide.addShape(pptx.ShapeType.rect, { x: bx, y: plotY + plotH - bh, w: 0.045, h: Math.max(0.01, bh), fill: { color: colors[vIdx] }, line: { color: colors[vIdx] } });
         });
