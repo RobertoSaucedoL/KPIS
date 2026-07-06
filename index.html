@@ -3290,22 +3290,31 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         const metric = clean(row[col.metric]);
         if (!isKpiDataRow({ id, objective, metric })) continue;
 
+        const valueFormats = {
+          accumulated: cellFormat(sheet, rowIndex, col.accumulated),
+          budget: cellFormat(sheet, rowIndex, col.budget),
+          current: cellFormat(sheet, rowIndex, col.current),
+          months: Object.fromEntries(MONTHS.map(month => [month, cellFormat(sheet, rowIndex, monthCols[month])]))
+        };
         const series = MONTHS.map((month, idx) => ({
           month: MONTH_LABELS[idx],
-          current: toNumber(row[monthCols[month]])
+          current: toNumber(row[monthCols[month]]),
+          currentFormat: valueFormats.months[month]
         }));
-        const valueFormats = [
-          cellFormat(sheet, rowIndex, col.accumulated),
-          cellFormat(sheet, rowIndex, col.budget),
-          cellFormat(sheet, rowIndex, col.current),
-          ...MONTHS.map(month => cellFormat(sheet, rowIndex, monthCols[month]))
+        const primaryFormats = [
+          valueFormats.budget,
+          valueFormats.current,
+          ...Object.values(valueFormats.months)
         ].filter(Boolean);
         const current = firstNumber(toNumber(row[col.current]), valueForMonth(series, config.selectedMonth, "current"), toNumber(row[col.accumulated]));
         const budget = toNumber(row[col.budget]);
         const unit = clean(row[col.unit]);
+        const hasNumericData = [row[col.accumulated], row[col.budget], row[col.current], row[col.compliance], row[col.weight], row[col.weighted], ...MONTHS.map(month => row[monthCols[month]])]
+          .some(value => toNumber(value) != null);
+        if (!metric && !hasNumericData) continue;
         const compliance = firstNumber(normalizeRatioNumber(row[col.compliance]), computeCompliance(current, budget, { metric, objective, unit }));
         const weight = normalizeRatioNumber(row[col.weight]);
-        const valueType = inferValueType({ objective, metric, unit, formats: valueFormats });
+        const valueType = inferValueType({ objective, metric, unit, formats: primaryFormats, accumulatedFormat: valueFormats.accumulated });
 
         currentRows.push({
           id,
@@ -3313,7 +3322,8 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
           metric,
           unit,
           valueType,
-          accumulatedFormat: cellFormat(sheet, rowIndex, col.accumulated),
+          valueFormats,
+          accumulatedFormat: valueFormats.accumulated,
           sourceComment: clean(row[col.source]),
           currentAccumulated: toNumber(row[col.accumulated]),
           budget,
@@ -3419,8 +3429,20 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
           return {
             month,
             current: toNumber(existing.current),
-            previous: toNumber(existing.previous)
+            previous: toNumber(existing.previous),
+            currentFormat: clean(existing.currentFormat),
+            previousFormat: clean(existing.previousFormat)
           };
+        });
+        const incomingFormats = row.valueFormats || {};
+        const valueFormats = {
+          accumulated: clean(incomingFormats.accumulated || row.accumulatedFormat),
+          budget: clean(incomingFormats.budget || row.budgetFormat),
+          current: clean(incomingFormats.current || row.currentFormat),
+          months: {}
+        };
+        MONTHS.forEach((month, monthIndex) => {
+          valueFormats.months[month] = clean(incomingFormats.months?.[month] || series[monthIndex]?.currentFormat);
         });
         const prepared = {
           ...row,
@@ -3429,7 +3451,8 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
           metric: clean(row.metric),
           unit: clean(row.unit),
           valueType: clean(row.valueType),
-          accumulatedFormat: clean(row.accumulatedFormat),
+          valueFormats,
+          accumulatedFormat: valueFormats.accumulated,
           sourceComment: clean(row.sourceComment),
           current: toNumber(row.current),
           previous: toNumber(row.previous),
@@ -3532,9 +3555,9 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
             <h3>${escapeHtml(row.metric || "Indicador sin nombre")}</h3>
             <p>${escapeHtml(row.objective || "Objetivo sin nombre")}</p>
             <div class="mini-bars">
-              ${miniBar("Ant.", values.previous, max, "#7796ab", row)}
-              ${miniBar("Actual", values.current, max, "#0d1c2c", row)}
-              ${miniBar("Ppto", row.budget, max, "#ee8901", row)}
+              ${miniBar("Ant.", values.previous, max, "#7796ab", row, values.previousFormat)}
+              ${miniBar("Actual", values.current, max, "#0d1c2c", row, values.currentFormat)}
+              ${miniBar("Ppto", row.budget, max, "#ee8901", row, row.valueFormats?.budget)}
             </div>
             <div class="card-signal">
               ${miniGaugeSvg(periodCompliance(row))}
@@ -3597,9 +3620,9 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       els.kpiNotes.value = commentFor(row);
       renderEvidence(row);
       els.comparisonGrid.innerHTML = [
-        metricTile(`Año anterior ${state.data.previousYear}`, values.previous, max, "#7796ab", row),
-        metricTile(`Año actual ${state.data.currentYear}`, values.current, max, "#0d1c2c", row),
-        metricTile("Presupuesto", row.budget, max, "#ee8901", row)
+        metricTile(`Año anterior ${state.data.previousYear}`, values.previous, max, "#7796ab", row, values.previousFormat),
+        metricTile(`Año actual ${state.data.currentYear}`, values.current, max, "#0d1c2c", row, values.currentFormat),
+        metricTile("Presupuesto", row.budget, max, "#ee8901", row, row.valueFormats?.budget)
       ].join("");
       els.monthlyChart.innerHTML = monthlySvg(row);
     }
@@ -3649,10 +3672,10 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       `).join("");
     }
 
-    function miniBar(label, value, max, color, row) {
+    function miniBar(label, value, max, color, row, formatHint = "") {
       const chartValue = chartNumber(value, row);
       const width = chartValue == null ? 0 : Math.max(2, Math.min(100, Math.abs(chartValue) / max * 100));
-      const display = formatValue(value, row);
+      const display = formatValue(value, row, formatHint);
       const tooltip = `${label}: ${display}`;
       return `
         <div class="mini-row">
@@ -3663,10 +3686,10 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       `;
     }
 
-    function metricTile(label, value, max, color, row) {
+    function metricTile(label, value, max, color, row, formatHint = "") {
       const chartValue = chartNumber(value, row);
       const width = chartValue == null ? 0 : Math.max(2, Math.min(100, Math.abs(chartValue) / max * 100));
-      const display = formatValue(value, row);
+      const display = formatValue(value, row, formatHint);
       const tooltip = `${label}: ${display}`;
       return `
         <div class="metric-tile">
@@ -3690,8 +3713,8 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
           primary: true
         },
         { label: "Acumulado", value: formatAccumulated(row, values.current) },
-        { label: "Mínimo", value: formatValue(row.budget, row) },
-        { label: "Real", value: formatValue(values.current, row) },
+        { label: "Mínimo", value: formatValue(row.budget, row, row.valueFormats?.budget) },
+        { label: "Real", value: formatValue(values.current, row, values.currentFormat) },
         { label: "Cumplimiento", value: formatPercent(compliance, 1) },
         { label: "Peso", value: formatPercent(row.weight, 0) },
         { label: "Real indicador", value: formatPercent(weighted, 1) }
@@ -3820,7 +3843,10 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
           fullLabel: label,
           previous: toNumber(seriesPoint.previous),
           current: toNumber(seriesPoint.current),
-          budget: toNumber(row.budget)
+          budget: toNumber(row.budget),
+          previousFormat: clean(seriesPoint.previousFormat),
+          currentFormat: clean(seriesPoint.currentFormat),
+          budgetFormat: clean(row.valueFormats?.budget)
         };
       });
       const max = maxForBars(points.flatMap(point => [chartNumber(point.previous, row), chartNumber(point.current, row), chartNumber(point.budget, row)]));
@@ -3837,21 +3863,21 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       const rects = points.map((point, idx) => {
         const x0 = left + idx * groupW + groupW / 2 - barW * 1.7;
         const bars = [
-          { key: "previous", label: `Ant. ${state.data.previousYear}`, value: point.previous, x: x0, color: `#${BRAND.slate}` },
-          { key: "current", label: `Actual ${state.data.currentYear}`, value: point.current, x: x0 + barW + 3, color: `#${BRAND.navy}` },
-          { key: "budget", label: "Ppto", value: point.budget, x: x0 + (barW + 3) * 2, color: `#${BRAND.orange}` }
+          { key: "previous", label: `Ant. ${state.data.previousYear}`, value: point.previous, format: point.previousFormat, x: x0, color: `#${BRAND.slate}` },
+          { key: "current", label: `Actual ${state.data.currentYear}`, value: point.current, format: point.currentFormat, x: x0 + barW + 3, color: `#${BRAND.navy}` },
+          { key: "budget", label: "Ppto", value: point.budget, format: point.budgetFormat, x: x0 + (barW + 3) * 2, color: `#${BRAND.orange}` }
         ];
         const labels = bars.filter(bar => (
           bar.value != null && bar.key === "current" && (idx === selectedIdx || idx % 2 === 0)
         )).map(bar => {
           const labelY = Math.max(top + 8, y(bar.value) - 7);
-          return `<text class="bar-value" x="${bar.x + barW / 2}" y="${labelY}" text-anchor="middle" style="fill:${bar.color}">${escapeHtml(formatCompactValue(bar.value, row))}</text>`;
+          return `<text class="bar-value" x="${bar.x + barW / 2}" y="${labelY}" text-anchor="middle" style="fill:${bar.color}">${escapeHtml(formatCompactValue(bar.value, row, bar.format))}</text>`;
         }).join("");
         const selectedBand = idx === selectedIdx ? `<rect x="${left + idx * groupW + 2}" y="${top - 10}" width="${groupW - 4}" height="${innerH + 16}" fill="#fff8ef" stroke="#${BRAND.orange}" stroke-width="1" rx="6" opacity="0.86"></rect>` : "";
         return `
           ${selectedBand}
           ${bars.map(bar => {
-            const tooltip = `${bar.label} ${point.fullLabel}: ${formatValue(bar.value, row)}`;
+            const tooltip = `${bar.label} ${point.fullLabel}: ${formatValue(bar.value, row, bar.format)}`;
             return `<rect x="${bar.x}" y="${y(bar.value)}" width="${barW}" height="${h(bar.value)}" fill="${bar.color}" rx="2" data-tooltip="${escapeHtml(tooltip)}" aria-label="${escapeHtml(tooltip)}" tabindex="0"><title>${escapeHtml(tooltip)}</title></rect>`;
           }).join("")}
           ${labels}
@@ -3860,9 +3886,9 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       }).join("");
       const selectedPoint = points[selectedIdx] || points[0] || {};
       const chips = [
-        { label: `Ant. ${formatCompactValue(selectedPoint.previous, row)}`, color: `#${BRAND.slate}` },
-        { label: `Actual ${formatCompactValue(selectedPoint.current, row)}`, color: `#${BRAND.navy}` },
-        { label: `Ppto ${formatCompactValue(selectedPoint.budget, row)}`, color: `#${BRAND.orange}` }
+        { label: `Ant. ${formatCompactValue(selectedPoint.previous, row, selectedPoint.previousFormat)}`, color: `#${BRAND.slate}` },
+        { label: `Actual ${formatCompactValue(selectedPoint.current, row, selectedPoint.currentFormat)}`, color: `#${BRAND.navy}` },
+        { label: `Ppto ${formatCompactValue(selectedPoint.budget, row, selectedPoint.budgetFormat)}`, color: `#${BRAND.orange}` }
       ];
       const chipW = 126;
       const chipGap = 10;
@@ -3913,9 +3939,12 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 
     function periodValues(row) {
       const month = normalizeMonth(state.selectedMonth);
+      const point = (row.series || []).find(item => normalizeMonth(item.month) === month) || {};
       return {
-        current: firstNumber(valueForMonth(row.series, month, "current"), row.current),
-        previous: firstNumber(valueForMonth(row.series, month, "previous"), row.previous)
+        current: firstNumber(point.current, row.current),
+        previous: firstNumber(point.previous, row.previous),
+        currentFormat: clean(point.currentFormat || row.valueFormats?.current),
+        previousFormat: clean(point.previousFormat)
       };
     }
 
@@ -3973,8 +4002,8 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         unit: row.unit || "s/u",
         source: shorten(row.sourceComment || "Fuente RH", 58),
         accumulated: formatAccumulated(row, values.current),
-        budget: formatValue(row.budget, row),
-        current: formatValue(values.current, row),
+        budget: formatValue(row.budget, row, row.valueFormats?.budget),
+        current: formatValue(values.current, row, values.currentFormat),
         compliance: formatPercent(compliance, 0),
         weight: formatPercent(row.weight, 0),
         weighted: formatPercent(weighted, 0)
@@ -4227,6 +4256,12 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       return clean(format).includes("%");
     }
 
+    function valueTypeFromFormat(format) {
+      if (formatHasCurrency(format)) return "currency";
+      if (formatHasPercent(format)) return "percent";
+      return "";
+    }
+
     function inferValueType(row) {
       const text = normalize(`${row?.unit || ""} ${row?.metric || ""} ${row?.objective || ""}`);
       const formats = Array.isArray(row?.formats) ? row.formats : [row?.accumulatedFormat];
@@ -4235,12 +4270,19 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 
       if (hasCurrencyFormat) return "currency";
       if (/(DIAS|DIA|MESES|MES|HORAS|HORA|TIEMPO|PLAZO|ANTIGUEDAD)/.test(text)) return "duration";
-      if (/(INDICE|INDEX|RATIO|FACTOR|ROTACION)/.test(text) && !hasPercentFormat) return "number";
+      if (/(PRUEBA ACIDA|ROTACION)/.test(text)) return "number";
+      if (/(INDICE|INDEX|RATIO|RAZON|FACTOR)/.test(text) && !/(PORCENTAJE|TASA|MARGEN|AVANCE|CUMPLIMIENTO|PARTICIPACION|%)/.test(text)) return "number";
       if (/((^|\s)#(\s|$)|CANTIDAD|NUMERO|PIEZAS|MOLDES|PROYECTOS|CLIENTES|PRODUCTOS|DOCUMENTOS|SOLICITUDES|ACCIDENTES|QUEJAS)/.test(text) && !hasPercentFormat) return "count";
       if (hasPercentFormat) return "percent";
       if (text.includes("%") || /(PORCENTAJE|TASA|MARGEN|AVANCE|CUMPLIMIENTO|PARTICIPACION)/.test(text)) return "percent";
       if (/(\$|MXN|PESO|IMPORTE|MONTO|TICKET|PRECIO|FACTURADO|FACTURA|VENTA|INGRESO|VALOR)/.test(text)) return "currency";
       return "number";
+    }
+
+    function isForcedNumberMetric(row) {
+      const text = normalize(`${row?.metric || ""} ${row?.objective || ""}`);
+      if (/(PRUEBA ACIDA|ROTACION)/.test(text)) return true;
+      return /(INDICE|INDEX|RATIO|RAZON)/.test(text) && !/(PORCENTAJE|TASA|MARGEN|AVANCE|CUMPLIMIENTO|PARTICIPACION)/.test(text);
     }
 
     function valueTypeFor(row) {
@@ -4280,14 +4322,15 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       return Math.abs(num) > 3 ? num / 100 : num;
     }
 
-    function formatValue(value, row) {
+    function formatValue(value, row, formatHint = "") {
       const num = toNumber(value);
       if (num == null) return "s/d";
-      if (isPercentRow(row)) {
+      const hintedType = isForcedNumberMetric(row) ? "" : valueTypeFromFormat(formatHint);
+      if (hintedType === "percent" || (!hintedType && isPercentRow(row))) {
         const percent = normalizePercentNumber(num);
         return formatPercent(percent, Math.abs(percent) < 0.1 ? 1 : 0);
       }
-      if (isCurrencyOrLargeUnit(row)) return formatCurrency(num);
+      if (hintedType === "currency" || (!hintedType && isCurrencyOrLargeUnit(row))) return formatCurrency(num);
       if (isDurationRow(row)) return formatDuration(num, row);
       if (isCountRow(row)) return new Intl.NumberFormat("es-MX", { maximumFractionDigits: Number.isInteger(num) ? 0 : 1 }).format(num);
       if (Math.abs(num) >= 1000) return formatThousands(num);
@@ -4348,11 +4391,12 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       return unit ? `${formatted} ${unit}` : formatted;
     }
 
-    function formatCompactValue(value, row) {
+    function formatCompactValue(value, row, formatHint = "") {
       const num = toNumber(value);
       if (num == null) return "";
-      if (isPercentRow(row)) return formatPercent(normalizePercentNumber(num), 0);
-      if (isCurrencyOrLargeUnit(row)) return formatCurrency(num, true);
+      const hintedType = isForcedNumberMetric(row) ? "" : valueTypeFromFormat(formatHint);
+      if (hintedType === "percent" || (!hintedType && isPercentRow(row))) return formatPercent(normalizePercentNumber(num), 0);
+      if (hintedType === "currency" || (!hintedType && isCurrencyOrLargeUnit(row))) return formatCurrency(num, true);
       if (isDurationRow(row)) return formatDuration(num, row, true);
       if (Math.abs(num) >= 1000) return formatThousands(num).replace(" mil", "k");
       return new Intl.NumberFormat("es-MX", { maximumFractionDigits: 1 }).format(num);
@@ -5134,9 +5178,9 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         const status = statusFor(periodCompliance(row));
         slide.addShape("ellipse", { x: x + 0.18, y: yy + 0.07, w: 0.1, h: 0.1, fill: { color: status.color }, line: { color: status.color } });
         slide.addText(shorten(row.metric || "", 62), { x: x + 0.35, y: yy, w: 4.35, h: rowH - 0.03, fontFace: "Montserrat", fontSize: 6.9, bold: true, color: BRAND.ink, margin: 0.01, fit: "shrink" });
-        slide.addText(formatValue(values.previous, row), { x: x + 4.92, y: yy, w: 0.7, h: rowH - 0.03, fontFace: "Montserrat", fontSize: 7.2, color: BRAND.slate, bold: true, align: "right", margin: 0.01 });
-        slide.addText(formatValue(values.current, row), { x: x + 5.72, y: yy, w: 0.7, h: rowH - 0.03, fontFace: "Montserrat", fontSize: 7.2, color: BRAND.navy, bold: true, align: "right", margin: 0.01 });
-        slide.addText(formatValue(row.budget, row), { x: x + 6.5, y: yy, w: 0.7, h: rowH - 0.03, fontFace: "Montserrat", fontSize: 7.2, color: BRAND.orange, bold: true, align: "right", margin: 0.01 });
+        slide.addText(formatValue(values.previous, row, values.previousFormat), { x: x + 4.92, y: yy, w: 0.7, h: rowH - 0.03, fontFace: "Montserrat", fontSize: 7.2, color: BRAND.slate, bold: true, align: "right", margin: 0.01 });
+        slide.addText(formatValue(values.current, row, values.currentFormat), { x: x + 5.72, y: yy, w: 0.7, h: rowH - 0.03, fontFace: "Montserrat", fontSize: 7.2, color: BRAND.navy, bold: true, align: "right", margin: 0.01 });
+        slide.addText(formatValue(row.budget, row, row.valueFormats?.budget), { x: x + 6.5, y: yy, w: 0.7, h: rowH - 0.03, fontFace: "Montserrat", fontSize: 7.2, color: BRAND.orange, bold: true, align: "right", margin: 0.01 });
         slide.addText(formatPercent(periodCompliance(row), 0), { x: x + 7.28, y: yy, w: 0.7, h: rowH - 0.03, fontFace: "Montserrat", fontSize: 7.2, color: status.color, bold: true, align: "right", margin: 0.01 });
       });
     }
@@ -5209,9 +5253,9 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     function addKpiCompareBars(pptx, slide, row, x, y, w, h) {
       const values = periodValues(row);
       const items = [
-        [`Año anterior ${state.data.previousYear}`, values.previous, BRAND.slate],
-        [`Año actual ${state.data.currentYear}`, values.current, BRAND.navy],
-        ["Presupuesto", row.budget, BRAND.orange]
+        [`Año anterior ${state.data.previousYear}`, values.previous, BRAND.slate, values.previousFormat],
+        [`Año actual ${state.data.currentYear}`, values.current, BRAND.navy, values.currentFormat],
+        ["Presupuesto", row.budget, BRAND.orange, row.valueFormats?.budget]
       ];
       const max = maxForBars(items.map(item => chartNumber(item[1], row)));
       items.forEach((item, idx) => {
@@ -5219,7 +5263,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         slide.addText(item[0], { x, y: yy, w: 1.55, h: 0.18, fontFace: "Montserrat", fontSize: 7, color: BRAND.muted, bold: true, margin: 0.01 });
         slide.addShape(pptx.ShapeType.rect, { x: x + 1.75, y: yy + 0.03, w: w - 2.55, h: 0.13, fill: { color: "E9EEF4" }, line: { color: "E9EEF4" }, radius: 0.05 });
         slide.addShape(pptx.ShapeType.rect, { x: x + 1.75, y: yy + 0.03, w: Math.max(0.03, (w - 2.55) * ((chartNumber(item[1], row) || 0) / max)), h: 0.13, fill: { color: item[2] }, line: { color: item[2] }, radius: 0.05 });
-        slide.addText(formatValue(item[1], row), { x: x + w - 0.62, y: yy - 0.02, w: 0.6, h: 0.2, fontFace: "Montserrat", fontSize: 8, bold: true, color: item[2], align: "right", margin: 0.01 });
+        slide.addText(formatValue(item[1], row, item[3]), { x: x + w - 0.62, y: yy - 0.02, w: 0.6, h: 0.2, fontFace: "Montserrat", fontSize: 8, bold: true, color: item[2], align: "right", margin: 0.01 });
       });
     }
 
@@ -5235,9 +5279,9 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       const selectedIdx = Math.max(0, MONTHS.indexOf(normalizeMonth(state.selectedMonth)));
       const selectedPoint = row.series[selectedIdx] || {};
       const selectedValues = [
-        [`Ant. ${formatCompactValue(selectedPoint.previous, row)}`, BRAND.slate],
-        [`Actual ${formatCompactValue(selectedPoint.current, row)}`, BRAND.navy],
-        [`Ppto ${formatCompactValue(row.budget, row)}`, BRAND.orange]
+        [`Ant. ${formatCompactValue(selectedPoint.previous, row, selectedPoint.previousFormat)}`, BRAND.slate],
+        [`Actual ${formatCompactValue(selectedPoint.current, row, selectedPoint.currentFormat)}`, BRAND.navy],
+        [`Ppto ${formatCompactValue(row.budget, row, row.valueFormats?.budget)}`, BRAND.orange]
       ];
       slide.addText(monthLabelFromKey(state.selectedMonth), { x: x + 1.35, y: y + 0.16, w: 0.72, h: 0.14, fontFace: "Montserrat", fontSize: 6, bold: true, color: BRAND.navy, align: "right", margin: 0.01, fit: "shrink" });
       selectedValues.forEach((item, idx) => {
